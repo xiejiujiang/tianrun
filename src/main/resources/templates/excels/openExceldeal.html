@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<head>
+  <meta charset="UTF-8">
+  <title>同步A账订单管理</title>
+  <style type="text/css">
+    /*css代码*/
+    .tank{
+      background-color: white;
+      width: 70%;
+      height: 400px;
+      margin-top: 5%;
+      margin-left: 15%;
+      box-shadow: 5px 5px 10px #555555;
+      border-radius: 3px;
+    }
+
+    #closeDiv:hover{
+      color: #5B9BD5;
+    }
+
+    #closeDivv:hover{
+      background-color: #5B9BD5;
+      color: white;
+    }
+
+    #startDiv:hover{
+      background-color: #5B9BD5;
+      color: white;
+    }
+
+    #chosefile:hover{
+      background-color: #5B9BD5;
+      color: white;
+    }
+
+    #chosefile{
+      cursor: pointer;
+      font-size: small;
+      position: absolute;
+      margin-left: 400px;
+      text-align: left;
+      padding-left: 5px;
+      line-height: 25px;
+      margin-top: 7px;
+      width: 80px;
+      border: #CCCCCC 1px solid;
+      background: url('http://ra03a3vjl.hn-bkt.clouddn.com/click.png');
+      background-repeat:no-repeat;
+      background-position:60px 6px;
+    }
+
+
+    #canclefile:hover{
+      background-color: #5B9BD5;
+      color: white;
+    }
+
+    #downloadexcel:hover{
+      background-color: #5B9BD5;
+      color: white;
+    }
+
+    .openfile{
+      cursor: pointer;font-size: small;
+      position: absolute;
+      margin-left: 400px;
+      text-align: center;
+      line-height: 25px;
+      margin-top: 7px;
+      width: 190px;
+      border: #CCCCCC 1px solid;
+      background: url('http://ra03a3vjl.hn-bkt.clouddn.com/cloud.png');
+      background-repeat:no-repeat;
+      background-position:120px 3px;
+    }
+  </style>
+</head>
+<body style="background-color: #888888;width: 100%;height: 100%">
+<div class="tank">
+  <div style="width: 100%;height: 40px;border-bottom: #DDDDDD 1px solid;">
+    <div style="height: 40px;text-align: center;line-height: 40px;width: 100px;padding-left: 10px;float: left;font-weight: bold">EXCEL上传</div>
+    <div id="closeDiv" style="height: 40px;line-height: 40px;text-align: right;cursor: pointer;width: 50px;padding-right: 10px;float: right">×</div>
+  </div>
+
+  <div style="height: 40px;width: 60%;margin-left: 50px;margin-top: 30px;">
+    <div style="text-align: center;line-height: 40px;position: absolute;font-size: small;width: 70px;">数据路径:</div>
+    <div id="ptttext" style="width: 300px;height: 25px;position: absolute;margin-left: 80px;background-color: #EEEEEE;margin-top: 7px;"></div>
+    <form id="uploadfile" method="POST" enctype="multipart/form-data" action="http://39.101.182.84:9997/tianrun/token/autoexcelinfo">
+      <input type="file" name="file" style="display: none" id="upload"></input>
+    </form>
+    <div id="chosefile">选择文件</div>
+    <div id="canclefile" style="cursor: pointer;font-size: small;position: absolute;margin-left: 510px;text-align: center;line-height: 25px;margin-top: 7px;width: 80px;border: #CCCCCC 1px solid">清除</div>
+  </div>
+
+  <!--<div style="height: 40px;width: 60%;margin-left: 50px;margin-top: 5px;">
+    <div style="text-align: center;line-height: 40px;position: absolute;font-size: small;width: 70px;">转换模板:</div>
+    <div style="width: 300px;height: 25px;position: absolute;margin-left: 80px;background-color: #EEEEEE;margin-top: 7px;"></div>
+    <div id="downloadexcel" class="openfile">下 载</div>
+  </div>-->
+
+  <div style="width: 100%;height: 50px;border-top: #CCCCCC 1px solid;margin-top: 190px;">
+    <div id="closeDivv" style="cursor: pointer;font-size: small;float: right;width: 80px;height: 30px;border: #CCCCCC 1px solid;margin-right: 30px;text-align: center;line-height: 30px;margin-top: 10px;">取消</div>
+    <div id="startDiv" style="cursor: pointer;font-size: small;float: right;width: 80px;height: 30px;border: #CCCCCC 1px solid;margin-right: 30px;text-align: center;line-height: 30px;margin-top: 10px;">开始导入</div>
+  </div>
+</div>
+</body>
+<script>
+  //JS代码
+  $("#closeDiv").click(function (){
+    window.location.href = 'about:blank';
+    window.close();
+  });
+
+  $("#closeDivv").click(function (){
+    window.location.href = 'about:blank';
+    window.close();
+  });
+
+  $("#chosefile").click(function (){
+    $("#upload").click();
+  });
+
+  $("#canclefile").click(function (){
+    var test1 = document.getElementById("upload");
+    test1.value = '';
+    $("#ptttext").text("");
+  });
+
+
+  $("#upload").on("change",function () {
+    var file = $("#upload")[0].files[0];
+    var filename = file.name;
+    if(filename != '' && filename.length > 20){
+      filename = filename.substring(0,12)+'....';
+      $("#ptttext").text(filename);
+    }else{
+      $("#ptttext").text(filename);
+    }
+  });
+
+  $("#startDiv").click(function (){
+    var filename = $("#ptttext").text();
+    if(filename == '' || filename == null){
+      alert('请上传一个excel文件后再开始同步！');
+      return;
+    }else{
+      if(filename.indexOf('xls') > -1 || filename.indexOf('xlsx') > -1){
+        //提交form表单
+        var formData = new FormData($( "#uploadfile")[0]);
+        $.ajax({
+          url: 'http://39.101.182.84:9997/tianrun/token/autoexcelinfo' ,
+          type: 'POST',
+          data: formData,
+          async: false,
+          cache: false,
+          contentType: false,
+          processData: false,
+          success: function (returndata) {
+            alert(returndata);
+          },
+          error: function (returndata) {
+            alert('提交失败，请重试！');
+          }
+        });
+      }else{
+        alert('必须上传excel的文件才可以！');
+      }
+    }
+  });
+
+  /*$("#downloadexcel").click(function (){
+    location.href = 'http://39.101.182.84:9998/renyi/apple/downloadexcel';
+  });*/
+</script>
+</html>
