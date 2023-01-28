@@ -1,7 +1,11 @@
 package com.example.tianrun.service;
 
+import java.util.List;
+
 public interface BasicService {
 
-    //这个里面 封装了 所有  T+ 基础类的 接口API 调用方法
+    String getResultByExcelList(List<Object>  list);
+
+    String getResultBySaParams(String code,String xsddcode,String codeday,String numbers,String totalamount,String customername,String skcode);
 
 }

@@ -2,4 +2,196 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.tianrun.mapper.orderMapper">
 
+    <select id="getDBAllOrgList" resultType="java.util.Map">
+        select id_num,code,AppKey,AppSecret,access_token,refresh_token,user_id,org_id,app_name,update_time from XXX_code_token
+    </select>
+
+    <update id="updateOrgToken" parameterType="java.util.Map">
+        update XXX_code_token set access_token = #{access_token},refresh_token = #{refresh_token},update_time = GETDATE()
+        where org_id = #{org_id}
+    </update>
+
+    <select id="getTokenByAppKey" parameterType="java.lang.String" resultType="java.lang.String">
+        select access_token from XXX_code_token where AppKey = #{AppKey}
+    </select>
+
+    <select id="getAppKeySecretByAppKey" parameterType="java.lang.String" resultType="java.util.Map">
+        select AppKey,AppSecret from XXX_code_token where org_id = #{OrgId}
+    </select>
+
+    <select id="getXsddmapByCode" parameterType="java.lang.String" resultType="java.util.Map">
+        select ISNULL(sum(t4.quantity),0) as totalNumbers,ISNULL(sum(t2.quantity),0) as ddNumbers,
+               max(t1.pubuserdefnvc3) as startdate,max(t1.pubuserdefnvc4) as enddate
+        from SA_SaleOrder_b t2,SA_SaleOrder t1
+        left join SA_SaleDelivery_b t4 on t1.code = t4.sourceVoucherCode
+        left join SA_SaleDelivery t3 on t3.id = t4.idSaleDeliveryDTO
+        where t1.id = t2.idSaleOrderDTO and t1.code = #{xsddcode}
+        group by t1.code
+    </select>
+
+    <select id="getTpartencodeByByJX" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1 code
+        from AA_PartnerEntity where partnerAbbName = #{partnerjx}
+    </select>
+
+    <select id="getTpartencodeByByConCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1 t2.code from
+        PU_PurchaseOrder t1,AA_PartnerEntity t2
+        where t1.code = #{pucode} and t1.idpartner = t2.id
+    </select>
+
+    <select id="getTCustmorcodeByByJX" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1 code
+        from AA_PartnerEntity where partnerAbbName = #{custmorjx}
+    </select>
+
+    <select id="getTinventorycodeByJX" parameterType="java.lang.String" resultType="java.util.Map">
+        select top 1
+        t1.code,t2.name as unitname,(select top 1 code from AA_Project where Name = #{xm}) as projectCode,
+        ISNULL(t3.name,'') as taxnum
+        from AA_inventoryEntity t1,AA_unit t2,eap_EnumItem t3
+        where t1.name = #{inventory}  and t1.idunit = t2.id
+        and t1.productInfo = (select top 1 id  from eap_EnumItem where Name = ( select priuserdefnvc2 from AA_Project where Name = #{xm} ) )
+        and t1.taxRate = t3.id
+    </select>
+
+    <select id="getSASourceVoucherDetailId" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1 ISNULL(t2.id,'') AS id
+        from SA_SaleOrder t1,SA_SaleOrder_b t2,AA_inventoryEntity t3
+        where t1.code = #{contractcode} and t1.id = t2.idSaleOrderDTO and t2.idinventory = t3.id
+        and t3.code = #{tinventorycode}
+    </select>
+
+    <select id="getPUSourceVoucherDetailId" parameterType="java.lang.String" resultType="java.util.Map">
+        select top 1
+        ISNULL(CAST(t2.id AS nvarchar),'') AS id,ISNULL(CAST(t2.pubuserdefdecm4 AS nvarchar) ,'') AS danbaicha,t2.taxPrice
+        from PU_PurchaseOrder t1,PU_PurchaseOrder_b t2,AA_inventoryEntity t3
+        where t1.code = #{contractcode} and t1.id = t2.idPurchaseOrderDTO and t2.idinventory = t3.id
+        and t3.code = #{tinventorycode}
+    </select>
+
+    <update id="updatePUdetailBySTCode" parameterType="java.lang.String">
+        update  t1
+        set t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
+            t1.origTaxAmount = t4.quantity*t1.taxprice,
+            t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice
+            from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,ST_RDRecord t3,ST_RDRecord_b t4
+        where t1.idPurchaseArrivalDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
+          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode}
+    </update>
+
+    <update id="updateSAdetailBySTCode" parameterType="java.lang.String">
+        update  t1
+        set t1.priuserdefdecm1 = (t1.quantity - t4.quantity),
+            t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
+            t1.origTaxAmount = t4.quantity*t1.taxprice,
+            t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice
+            from SA_SaleDelivery_b t1,SA_SaleDelivery t2,ST_RDRecord t3,ST_RDRecord_b t4
+        where t1.idSaleDeliveryDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
+          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode}
+    </update>
+
+    <update id="updateSASAPreReceiveAmount" parameterType="java.lang.String">
+        update  SA_SaleDelivery
+        set PreReceiveAmount =
+            ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+            where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO ) ,
+            origprereceiveamount = ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+                                     where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO )
+        where id = ( select top 1 t1.id from SA_SaleDelivery t1,ST_RDRecord t2 where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} )
+    </update>
+
+    <update id="updateSAPreReceiveAmount" parameterType="java.lang.String">
+        update SA_SaleDeliveryPreReceive
+        set origcancelamount =
+                ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+                  where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO )
+        where idSaleDeliveryDTO =
+              (select top 1  t1.id from SA_SaleDelivery t1,ST_RDRecord t2 where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} )
+    </update>
+
+    <select id="getTaxByInventoryCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1  ISNULL(t2.name,'') as taxnum
+        FROM  AA_InventoryEntity t1,eap_EnumItem t2
+        where t1.code = #{inventorycode} and t1.taxRate = t2.id
+    </select>
+
+    <select id="getCustmoryushouByCode" parameterType="java.lang.String" resultType="java.util.Map">
+        select t1.code,(t1.amount-t1.cancelOrigAmount) as amount,t1.amount as origamount,
+               CONVERT(varchar(100), t1.voucherdate, 23) as prevoucherdate
+        from AA_PartnerEntity t2
+        left join ARAP_ReceivePayment t1
+        on t1.idpartner = t2.id and  t1.idbusitype = 16 and ( (t1.amount-t1.cancelOrigAmount) > 0  ) and t1.code != 'NULL' and t1.code is not null
+        where  t2.code = #{code} and t1.code != 'NULL' and t1.code is not null
+        order by t1.id asc
+    </select>
+
+    <select id="getTotalYushouAmountByCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select sum(t1.amount-t1.cancelOrigAmount) as totalamount
+        from ARAP_ReceivePayment t1,AA_PartnerEntity t2
+        where t1.idpartner = t2.id and t2.code = #{code} and t1.idbusitype = 16 and ( (t1.amount-t1.cancelOrigAmount) > 0  )
+        group by t2.id
+    </select>
+
+    <update id="updateSAYuShou" parameterType="java.util.Map">
+        update SA_SaleDelivery
+        set PreReceiveAmount = #{cancelamount},origprereceiveamount = #{cancelamount}
+        where code = #{sacode}
+    </update>
+
+    <insert id="addSAYuShou" parameterType="java.util.Map">
+        insert into SA_SaleDeliveryPreReceive(vouchercode,origamount,orignocancelamount,origcancelamount,cancelamount,idSaleDeliveryDTO,idvouchertype,voucherdate)
+        values(#{code},#{origamount},#{amount},#{cancelamount},#{cancelamount},select id from SA_SaleDelivery where code = #{sacode},92,#{prevoucherdate})
+    </insert>
+
+    <insert id="addSAYuShouList" parameterType="java.util.List">
+        insert into SA_SaleDeliveryPreReceive(vouchercode,origamount,orignocancelamount,origcancelamount,cancelamount,idSaleDeliveryDTO,idvouchertype,voucherdate)
+        values
+        <foreach item="item" collection="custmoryushoulist" separator=",">
+            (#{item.code},#{item.origamount},#{item.amount},#{item.cancelamount},#{item.cancelamount},select id from SA_SaleDelivery where code = #{sacode},92,#{item.prevoucherdate})
+        </foreach>
+    </insert>
+
+    <update id="updateSaDetailBySaOrderCode" parameterType="java.lang.String">
+        update t2
+        set t2.taxPrice = t4.taxPrice,t2.taxAmount = t4.taxAmount,t2.price = t4.price,t2.origTaxAmount = t4.origTaxAmount
+        from SA_SaleDelivery_b t2,SA_SaleDelivery t1,SA_SaleOrder t3,SA_SaleOrder_b t4
+        where t3.code = #{code} and t3.id = t4.idSaleOrderDTO and t3.code = t1.SaleOrderCode  and t1.id = t2.idSaleDeliveryDTO
+        and t2.idinventory = t4.idinventory and t2.quantity = t4.quantity
+    </update>
+
+    <update id="updateSaDeliveryDetailBySaOrderCode" parameterType="java.lang.String">
+        update t2
+        set t2.pubuserdefnvc1 =  t3.pubuserdefnvc1,t2.pubuserdefnvc2 = t3.pubuserdefnvc2,
+            t2.pubuserdefnvc5 = t3.pubuserdefnvc5,t2.pubuserdefnvc6 = t3.pubuserdefnvc6,
+            t2.quantity = t3.quantity,t2.baseQuantity = t3.baseQuantity,
+            t2.taxAmount = t3.quantity * t2.taxPrice
+        from SA_SaleDelivery_b t2,SA_SaleDelivery t1,SA_SaleDelivery_b t3
+        where t1.id = t2.idSaleDeliveryDTO and t1.id = t3.idSaleDeliveryDTO
+        and t1.code = #{code} and t3.pubuserdefnvc1 is not null
+        and (t2.pubuserdefnvc1 is null or t2.pubuserdefnvc1 == "")
+    </update>
+
+    <select id="getCustmorRule3Byname" parameterType="java.lang.String">
+        select sum(t1.amount-t1.cancelOrigAmount) as totalamount,max(t2.priuserdefnvc1) as sktype
+        from AA_PartnerEntity t2 left join ARAP_ReceivePayment t1
+        on t1.idpartner = t2.id and t1.idbusitype = 16 and ( (t1.amount-t1.cancelOrigAmount) > 0  )
+        where t2.name = #{name}
+        group by t2.id
+    </select>
+
+    <select id="getYushouTypeByCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select top 1  priuserdefnvc1  from ARAP_ReceivePayment where code = #{code}
+    </select>
+
+
+    <!--查询这个客户的 真实的 可以使用的预收款 还有多少（不包含定金）-->
+    <select id="getRealYushouTypeByTcustmorname" parameterType="java.lang.String" resultType="java.lang.String">
+        select CAST(sum(t1.amount-t1.cancelOrigAmount) AS nvarchar(500)) as amount
+        from AA_PartnerEntity t2
+        left join ARAP_ReceivePayment t1
+        on t1.idpartner = t2.id and t1.idbusitype = 16 and ( (t1.amount-t1.cancelOrigAmount) > 0  )
+        where t2.name = #{name}
+        group by t2.code
+    </select>
 </mapper>

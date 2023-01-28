@@ -4,15 +4,16 @@ import com.alibaba.excel.ExcelReader;
 import com.alibaba.excel.metadata.Sheet;
 import com.alibaba.excel.support.ExcelTypeEnum;
 import com.alibaba.fastjson.JSONObject;
-import com.example.tianrun.service.TokenService;
-import com.example.tianrun.utils.AESUtil;
+import com.example.tianrun.SAsubscribe.SACsubJsonRootBean;
+import com.example.tianrun.entity.RetailTianrun;
+import com.example.tianrun.service.BasicService;
+import com.example.tianrun.utils.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import com.example.tianrun.entity.RetailCode;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,6 +22,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import com.example.tianrun.mapper.orderMapper;
 import java.util.*;
 
 @CrossOrigin
@@ -31,7 +33,10 @@ public class TokenController {
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenController.class);
 
     @Autowired
-    private TokenService tokenService;
+    private BasicService basicService;
+
+    @Autowired
+    private orderMapper orderMapper;
 
     //这个里面 主要 用来 接受 code ,刷新 token ，更新对应的数据库
     @RequestMapping(value="/recode", method = {RequestMethod.GET,RequestMethod.POST})
@@ -54,13 +59,47 @@ public class TokenController {
             String params=buffer.readLine();
             JSONObject jsonObject = JSONObject.parseObject(params);
             String encryptMsg = jsonObject.getString("encryptMsg");
-            String destr = AESUtil.decrypt(encryptMsg,"123456789012345x");
+            String destr = AESUtils.aesDecrypt(encryptMsg,"123456789012345x");
             // {"id":"AC1C04B100013301500B4A9B012DB2EC","appKey":"A9A9WH1i","appId":"58","msgType":"SaleDelivery_Audit","time":"1649994072443","bizContent":{"externalCode":"","voucherID":"23","voucherDate":"2022/4/15 0:00:00","voucherCode":"SA-2022-04-0011"},"orgId":"90015999132","requestId":"86231b63-f0c2-4de1-86e9-70557ba9cd62"}
             JSONObject job = JSONObject.parseObject(destr);
-            if("SaleDelivery_Audit".equals(job.getString("msgType"))){
-                //SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);//销货单的订阅信息DTO
-                // 处理 正常的 销货单审核 上传 ，图片上传 功能   和  单据不上传，只上传图片的功能。
 
+            // 采购入库单审核 订阅
+            if("PurchaseReceiveVoucher_Audit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+                LOGGER.info("-------------------采购入库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
+                //查询下 这个 入库单上的 商品 和 对应的 数量，金额。以及 对应的 进货单是哪个，然后再更新进货单上面的内容
+                orderMapper.updatePUdetailBySTCode(vourcherCode);//还要更新下 差异字段哦 ！
+            }
+
+            // 销售出库单审核 订阅
+            if("SaleDispatchVoucher_Audit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+                LOGGER.info("-------------------销售出库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
+                // 审核之后 把 实际 数量 反写回 销货单的 数量上， 并自动计算 差异 ，写入 数量差异字段（都是是自定义字段）
+                orderMapper.updateSAdetailBySTCode(vourcherCode);//还要更新下 差异字段哦 ！
+                // 也需要把  预收款的核销金额 同步 。
+                //先更新 销货单上的 预收金额
+                orderMapper.updateSASAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
+                //再更新 销货单预收明细里面的核销金额
+                orderMapper.updateSAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
+            }
+
+            // 销售订单（合同）变更——》更新 后，保存
+            if("SaleOrder_Save".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+                // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
+                orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
+            }
+
+            // 销货单保存（新增）
+            if("SaleDelivery_Create".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+                // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
+                orderMapper.updateSaDeliveryDetailBySaOrderCode(vourcherCode);
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -88,28 +127,34 @@ public class TokenController {
             ExcelListener listener = new ExcelListener();
             ExcelReader excelReader = new ExcelReader(inputStream, ExcelTypeEnum.XLS, null, listener);
 
-            //已经做好的 普天T+名称匹配表是 从 第一个sheet 的 第一行 开始获取数据
-            com.alibaba.excel.metadata.Sheet sheet = new Sheet(1,0, RetailCode.class);
+            com.alibaba.excel.metadata.Sheet sheet = new Sheet(2,1, RetailTianrun.class);
             excelReader.read(sheet);
             List<Object> list = listener.getDatas();//当前从上传的excel中获取的数据
-            List<String> codelist = new ArrayList<String>();//最终读取之后的数据
-            for(Object oo : list){
-                RetailCode retailCode = (RetailCode)oo;
-                if(retailCode != null && !"".equals(retailCode.getCode())){
-                    codelist.add(retailCode.getCode());
-                }
-            }
-            // 业务处理逻辑
-            if(codelist != null && codelist.size() != 0){
-
-                return "";
-            }else{
-                return "参数错误，请重试！";
-            }
+            String resulst = basicService.getResultByExcelList(list);
+            return resulst;
         }catch (Exception e){
             e.printStackTrace();
             return "参数错误，请重试！";
         }
     }
 
+
+    // 销货单 保存后 的时候
+    // 1. 判断 导入油厂和选单油厂是否一致（前端已完成）
+    // 2. 查询当前数量 和 订单已经执行的数量 是否超过 订单总数  已经  当前单据时间 是否在 订单的有效时间内
+    // 3. 如果 客户的 自定义项 是 先款，还需与判断 还能使用的预收款金额 》=  此单的销售金额 。否则，不卖！
+    // 4. 如果上面三点都没问题才允许保存！ （再 通过 保存的消息订阅 来更新明细里面的  司机 4 个信息）
+    @RequestMapping(value="/getDistricntKC", method = {RequestMethod.GET,RequestMethod.POST})
+    public @ResponseBody String getDistricntKC(HttpServletRequest request, HttpServletResponse response) throws Exception{
+        Map<String,Object> result = new HashMap<String,Object>();
+        String code = request.getParameter("code");//当前的 单据编号(销货单)
+        String xsddcode = request.getParameter("xsddcode");//当前的单据 对应的  销售订单单据编号
+        String codeday = request.getParameter("codeday");//当前的 单据日期
+        String numbers = request.getParameter("numbers");//当前单据的总数量
+        String totalamount = request.getParameter("totalamount");//当前单据的总金额(含税)
+        String customername = request.getParameter("customername");//客户名称
+        String skcode = request.getParameter("skcode");//,'xxxxx','xxxxxxx','xxxxxx'  使用预收的收款单单号
+        String saresult = basicService.getResultBySaParams(code,xsddcode,codeday,numbers,totalamount,customername,skcode);
+        return saresult;
+    }
 }

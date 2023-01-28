@@ -22,7 +22,7 @@ public class SaticScheduleTask {
     private void configureTasks() {
         System.err.println("-------------------- 执行静态定时任务开始: " + LocalDateTime.now() + "--------------------");
         try{
-            // tokenService.refreshToken();
+            tokenService.refreshToken();
         }catch (Exception e){
             e.printStackTrace();
         }
