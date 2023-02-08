@@ -24,7 +24,7 @@ public interface orderMapper {
     //根据 OrgId 获取 当前的 AppKey 和 AppSecret
     Map<String,String> getAppKeySecretByAppKey(@Param("OrgId") String OrgId);
 
-    Map<String,Object>  getXsddmapByCode(@Param("xsddcode") String xsddcode);
+    Map<String,Object>  getXsddmapByCode(@Param("xsddcode") String xsddcode,@Param("code") String code);
 
     String getTpartencodeByByJX(String partnerjx);//根据 供应商简写 返回 供应商编码（T+有简写）
 
@@ -32,7 +32,7 @@ public interface orderMapper {
 
     String getTCustmorcodeByByJX(String custmorjx);//根据 客户简写 返回 客户编码（T+有简写）
 
-    Map<String,Object> getTinventorycodeByJX(@Param("xm") String xm,@Param("pakge") String pakge,@Param("inventory") String inventory);//根据 存货名称 返回 存货编码
+    Map<String,Object> getTinventorycodeByJX(String name,String productInfo,String xm);//根据 存货名称 返回 存货编码
 
     String getSASourceVoucherDetailId(String contractcode,String tinventorycode);
 
@@ -41,6 +41,10 @@ public interface orderMapper {
     void updatePUdetailBySTCode(String vourcherCode);
 
     void updateSAdetailBySTCode(String vourcherCode);
+
+    void updateARAPDetailBySABusinessCode(String vourcherCode);
+
+    void updateARAPDetailByPUBusinessCode(String vourcherCode);
 
     void updateSASAPreReceiveAmount(String vourcherCode);
 
@@ -67,4 +71,28 @@ public interface orderMapper {
     String getYushouTypeByCode(String code);
 
     String getRealYushouTypeByTcustmorname(String name);
+
+    String getXMkoudaiByName(String name);
+
+    void addQTYSByStr(String qtyscode,String code,String djje);//通过 报价单 生成
+
+    void addQTYSBySAStr(String qtyscode,String code,String djje);//通过 销售订单 生成
+
+    Integer getMaxidByQTYS();
+
+    void addQTYSdetailByStr(String id,String djje);
+
+    void deleteQTYSdetail(String code);
+
+    void deleteQTYS(String code);
+
+    Map<String,Object> getSaorderDetailByCode(String code);
+
+    String getQTSYcanuseByCode(String xsddcode);
+
+    String  getddNumbersByCode(String xsddcode);
+
+    void addYSWLByQTYSCode(String qtsycode);
+
+    void deleteYSWLByQTYSCode(String qtsycode);
 }

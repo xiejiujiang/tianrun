@@ -52,7 +52,6 @@ public class TokenController {
     //T+ 的 消息订阅的接口。
     @RequestMapping(value="/ticket", method = {RequestMethod.GET,RequestMethod.POST})
     public @ResponseBody String reticket(HttpServletRequest request, HttpServletResponse response) {
-        LOGGER.info("------------------- 正式消息接收地址，包含 ticket，消息订阅，授权 -------------------");
         try{
             InputStreamReader reader=new InputStreamReader(request.getInputStream(),"utf-8");
             BufferedReader buffer=new BufferedReader(reader);
@@ -62,14 +61,16 @@ public class TokenController {
             String destr = AESUtils.aesDecrypt(encryptMsg,"123456789012345x");
             // {"id":"AC1C04B100013301500B4A9B012DB2EC","appKey":"A9A9WH1i","appId":"58","msgType":"SaleDelivery_Audit","time":"1649994072443","bizContent":{"externalCode":"","voucherID":"23","voucherDate":"2022/4/15 0:00:00","voucherCode":"SA-2022-04-0011"},"orgId":"90015999132","requestId":"86231b63-f0c2-4de1-86e9-70557ba9cd62"}
             JSONObject job = JSONObject.parseObject(destr);
-
+            LOGGER.info("------------------- 正式消息接收地址，包含 ticket，消息订阅，授权,具体是："+job.getString("msgType")+" -------------------");
             // 采购入库单审核 订阅
             if("PurchaseReceiveVoucher_Audit".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 LOGGER.info("-------------------采购入库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
                 //查询下 这个 入库单上的 商品 和 对应的 数量，金额。以及 对应的 进货单是哪个，然后再更新进货单上面的内容
-                orderMapper.updatePUdetailBySTCode(vourcherCode);//还要更新下 差异字段哦 ！
+                orderMapper.updatePUdetailBySTCode(vourcherCode);
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailByPUBusinessCode(vourcherCode);
             }
 
             // 销售出库单审核 订阅
@@ -78,24 +79,48 @@ public class TokenController {
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 LOGGER.info("-------------------销售出库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
                 // 审核之后 把 实际 数量 反写回 销货单的 数量上， 并自动计算 差异 ，写入 数量差异字段（都是是自定义字段）
-                orderMapper.updateSAdetailBySTCode(vourcherCode);//还要更新下 差异字段哦 ！
+                orderMapper.updateSAdetailBySTCode(vourcherCode);//还要更新下 差异字段哦
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailBySABusinessCode(vourcherCode);
+
                 // 也需要把  预收款的核销金额 同步 。
                 //先更新 销货单上的 预收金额
-                orderMapper.updateSASAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
+                //orderMapper.updateSASAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
                 //再更新 销货单预收明细里面的核销金额
-                orderMapper.updateSAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
+                //orderMapper.updateSAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
             }
 
-            // 销售订单（合同）变更——》更新 后，保存
-            if("SaleOrder_Save".equals(job.getString("msgType"))){
+            // 销售订单（合同）变更——》更新 后，保存, 点价后，更新后续单据的 商品 单价哦
+            // 注意！  这个地方 可能有BUG， 因为 销售订单 到 销货单，可能不只是这两个表 这么简单！
+            if("SaleOrder_Change".equals(job.getString("msgType"))
+                || "SaleOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
                 orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
             }
 
-            // 销货单保存（新增）
-            if("SaleDelivery_Create".equals(job.getString("msgType"))){
+            // 销售订单审核  处理 定金 的问题
+            if("SaleOrder_Audit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String code = jrb.getBizContent().getVoucherCode();//销售订单单号
+                //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单数量/报价单数量）
+                //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
+                basicService.dealQTYSBySaOrderCode(code);
+            }
+
+            // 销售订单 弃审  处理 定金 的问题
+            if("SaleOrder_UnAudit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String code = jrb.getBizContent().getVoucherCode();//销售订单单号
+                //根据 这个 code -》priuserdefnvc2  删除 对于的 其他应收单
+                basicService.deleteQTYSByCode(code);
+            }
+
+            //用来处理复制行的问题
+            // 销货单保存（修改） 这个只是用来处理，销货单选单后，客户不想复制明细的个别字段内容，所以通过SQL复制一下
+            if("SaleDelivery_Update".equals(job.getString("msgType"))
+                    || "SaleDelivery_Change".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
@@ -156,5 +181,24 @@ public class TokenController {
         String skcode = request.getParameter("skcode");//,'xxxxx','xxxxxxx','xxxxxx'  使用预收的收款单单号
         String saresult = basicService.getResultBySaParams(code,xsddcode,codeday,numbers,totalamount,customername,skcode);
         return saresult;
+    }
+
+
+    // 看下一个！！！
+    //失效！！！！（报价单 审核 或者 弃审后，根据 单据编号， 自动生成 / 删除 对应的 其他应收单）
+    //报价单：是否生成定金 默认是 空的。在保存审核后 不自动生成，
+    //更改到  指定人（zt_user 对应的ID） 进行 变更，变更后 再保存 才可以 自动生成定金
+    //http://47.92.249.206:9991/tianrun/token/auqtysByCode?code=20230202-12&djje=14875&yn=&type=add
+    @RequestMapping(value="/auqtysByCode", method = {RequestMethod.GET,RequestMethod.POST})
+    public @ResponseBody String auqtysByCode(HttpServletRequest request, HttpServletResponse response) throws Exception{
+        Map<String,Object> result = new HashMap<String,Object>();
+        String code = request.getParameter("code");
+        String djje = request.getParameter("djje");
+        String yn = request.getParameter("yn");
+        String type = request.getParameter("type");
+        synchronized (this){
+            String saresult = basicService.auqtysByCode(code,djje,yn,type);
+            return saresult;
+        }
     }
 }

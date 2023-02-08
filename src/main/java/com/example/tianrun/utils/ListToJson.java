@@ -76,17 +76,18 @@ public class ListToJson {
 
             //当票据类型为收据、专票且供应商报价不含税时（价外税），应输入金额OrigDiscountAmount或单价OrigDiscountPrice//明细1 的 不含税单价( 含税单价 / 1+税率)
             // 不含税单价
-            System.out.println( retailTianrun.getTaxprice() + ", " + Float.valueOf(retailTianrun.getTaxnum()) );
-            DetailM1.put("OrigDiscountPrice",Float.valueOf(retailTianrun.getTaxprice())/(1+(Float.valueOf(retailTianrun.getTaxnum())/100)));
-            //DetailM1.put("OrigTaxPrice",retailTianrun.getTaxprice());//明细1 的 含税单价
+            //DetailM1.put("OrigDiscountPrice",Float.valueOf(retailTianrun.getTaxprice())/(1+(Float.valueOf(retailTianrun.getTaxnum())/100)));
+            DetailM1.put("OrigTaxPrice",retailTianrun.getTaxprice());//明细1 的 含税单价
 
+            //关联采购订单
             DetailM1.put("idsourcevouchertype","27");//明细1 的 来源单据类型ID
-            DetailM1.put("sourceVoucherCode",retailTianrun.getContractcode());//明细1 的 来源单据单据编号 (合同号)
+            //DetailM1.put("sourceVoucherCode",retailTianrun.getContractcode());//明细1 的 来源单据单据编号 (合同号)
+            DetailM1.put("sourceVoucherCode",retailTianrun.getSourceVoucherCode());
             DetailM1.put("sourceVoucherDetailId",retailTianrun.getPusourceVoucherDetailId());//明细1 的 来源单据单据对应的明细行ID
 
             // 自定义字段
             List<String> mingxilistkey = new ArrayList<String>();
-            mingxilistkey.add("pubuserdefdecm7");//委托数量 ！
+            mingxilistkey.add("pubuserdefdecm9");//委托数量 ！
             mingxilistkey.add("pubuserdefdecm4");//蛋白差
             mingxilistkey.add("pubuserdefnvc1");//司机姓名 字符公用自定义项1
             mingxilistkey.add("pubuserdefnvc2");//司机车牌号 符公用自定义项2
@@ -126,12 +127,12 @@ public class ListToJson {
 
             sa.put("Code",retailTianrun.getSacode()); //这一笔 销货单的 单号！！
 
-            Map<String,Object> Department = new HashMap<String,Object>();
+            /*Map<String,Object> Department = new HashMap<String,Object>();
             Department.put("Code","01");//部门编码
             sa.put("Department",Department);
             Map<String,Object> Clerk = new HashMap<String,Object>();
             Clerk.put("Code","0104");//业务员编码
-            sa.put("Clerk",Clerk);
+            sa.put("Clerk",Clerk);*/
             //Map<String,Object> ReceiveType = new HashMap<String,Object>();
             //ReceiveType.put("Code","05");//收款方式 00--限期收款，01--全额订金，02--全额现结，03--月结，04--分期收款，05--其它
             //sa.put("ReceiveType",ReceiveType);
@@ -172,11 +173,16 @@ public class ListToJson {
             DetailM1.put("OrigTaxPrice",retailTianrun.getTaxprice());//明细1 的 含税单价
             DetailM1.put("DetailMemo",retailTianrun.getRowmemo());//行备注
 
+            //油厂——》就是项目
+            Map<String,Object> DetailM1Project = new HashMap<String,Object>();
+            DetailM1Project.put("Code",retailTianrun.getProjectCode());// 是code ，不是 name
+            DetailM1.put("Project",DetailM1Project);
+
             //司机，司机身份证，司机电话，车牌号(可以用自定义字段 传入)
             List<String> biaotoulistkey = new ArrayList<String>();
             biaotoulistkey.add("pubuserdefnvc1");//司机姓名
             biaotoulistkey.add("pubuserdefnvc2");//司机车牌号
-            biaotoulistkey.add("pubuserdefdecm7"); //委托数量
+            biaotoulistkey.add("pubuserdefdecm9"); //委托数量
             biaotoulistkey.add("pubuserdefnvc6");//司机身份证号  扩展公用自定义项6
             biaotoulistkey.add("pubuserdefnvc5");//司机手机号  扩展公用自定义项5
             //biaotoulistkey.add("priuserdefnvc4"); //可以用来记录 进货单和销货单的关联字段
@@ -200,8 +206,14 @@ public class ListToJson {
         return lsresut;
     }
 
-    public static void main(String[] args) {
-        Float ff = Float.valueOf("4260")/(1+(Float.valueOf("9")/100));
-        System.out.println("ff ===== " + ff);
+    public static void main(String[] args) throws Exception{
+        if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse("2023-01-31"),
+                new SimpleDateFormat("yyyyMMdd").parse("2023-01-01 00:00:00"),
+                new SimpleDateFormat("yyyyMMdd").parse("2023-01-31 00:00:00"))
+                ){
+            System.out.println("11111111111111111");
+        }else{
+            System.out.println("2222222222222222222");
+        }
     }
 }

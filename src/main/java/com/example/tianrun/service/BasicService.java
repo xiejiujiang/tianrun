@@ -8,4 +8,10 @@ public interface BasicService {
 
     String getResultBySaParams(String code,String xsddcode,String codeday,String numbers,String totalamount,String customername,String skcode);
 
+    String auqtysByCode(String code,String djje,String yn,String type);
+
+    void dealQTYSBySaOrderCode(String code);
+
+    void deleteQTYSByCode(String code);
+
 }

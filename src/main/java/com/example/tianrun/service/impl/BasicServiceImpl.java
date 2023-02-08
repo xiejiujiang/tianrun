@@ -30,15 +30,14 @@ public class BasicServiceImpl implements BasicService {
             Map<String,Object> hebingMap = new HashMap<String,Object>();//用来存取合并行号的具体内容
             List<RetailTianrun> datalist = new ArrayList<RetailTianrun>();//最终读取之后的数据
             List<RetailTianrun> sadatalist = new ArrayList<RetailTianrun>();//最终读取之后的数据
+            List<Float> plansalenumberslist = new ArrayList<Float>();
             for(int i=0;i<list.size();i++){
                 Object oo = list.get(i);
                 RetailTianrun retailTianrun = (RetailTianrun)oo;
+                Float plansalenumber = Float.valueOf(retailTianrun.getPlansalenumbers());
+                plansalenumberslist.add(plansalenumber);
                 String sacode = "SA-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                 retailTianrun.setSacode(sacode);
-
-                sadatalist.add(retailTianrun);
-                datalist.add(retailTianrun);
-
                 //当合并行号 不为空， 存起来
                 String hebingnumber = retailTianrun.getHebingnumber();// 第 i 行的 合并行哈是   hebingnumber
                 if(hebingnumber != null && !"".equals(hebingnumber)){
@@ -49,7 +48,10 @@ public class BasicServiceImpl implements BasicService {
                         hebingMap.put(hebingnumber,hebingMap.get(hebingnumber).toString()+","+i);
                     }
                 }
+                sadatalist.add(retailTianrun);
+                datalist.add(retailTianrun);
             }
+
             //再来处理这个 销售list
             Iterator<String> iterator = hebingMap.keySet().iterator();
             while (iterator.hasNext()) {
@@ -73,25 +75,43 @@ public class BasicServiceImpl implements BasicService {
                 sadatalist.get(firsthang).setPlansalenumbers(""+Float.valueOf(totalnumber));
             }
 
-
             // 业务处理逻辑
             if(datalist != null && datalist.size() != 0){
-                //先处理部分数据！
-                for (int i = 0;i<datalist.size();i++){//同时 处理了  进货list  和   销货List
+                //同时 处理了  进货list  和   销货List
+                String pufailstr = "";//记录失败的行数 和原因
+                String safailstr = "";//记录失败的行数 和原因
+                for (int i=0;i<datalist.size();i++){
                     RetailTianrun retailTianrun = datalist.get(i);
                     retailTianrun.setTpartencode(orderMapper.getTpartencodeByByConCode(retailTianrun.getContractcode()));//根据采购合同号查询对应的供应商编号
+                    String sataxprice = sadatalist.get(i).getTaxprice();
                     sadatalist.get(i).setTcustmorcode(orderMapper.getTCustmorcodeByByJX(retailTianrun.getGetcustomer()));
+
                     //交货地点——》油厂（决定是否扣包装）；包装（KG》包粕：散装》散粕） + 物料名称 ——》 这三样 一共决定  存货 以及 对应的 主单位(顺带取出 项目编号——》就是油厂名称对应的编号)
-                    Map<String,Object> tinventorycode = orderMapper.getTinventorycodeByJX(retailTianrun.getDeliveryplace(),"%"+retailTianrun.getPacking()+"%",retailTianrun.getInventory());
+                    //项目中的自定义字段是判断是否  扣袋 还是 不扣袋
+                    //加上 包装（ 50KG、70KG ） == 70KG*扣袋  ，否则 就是 散装 ，对应T+存货的品牌
+                    //导入的物料名称+上一行的品牌，对应找到是哪个 T+存货
+                    String excelInventoryname = retailTianrun.getInventory().replaceAll(" ","");
+                    String excelPack = retailTianrun.getPacking();
+                    String excelDeliveryplace = retailTianrun.getDeliveryplace();
+                    if(excelInventoryname !=null && !"".equals(excelInventoryname) &&
+                            (excelInventoryname.contains("（") || excelInventoryname.contains("(")) ){
+                        // 说明是：   豆粕（43%）
+                        excelInventoryname = excelInventoryname.replaceAll("（","");
+                        excelInventoryname = excelInventoryname.replaceAll("）","");
+                        excelInventoryname = excelInventoryname.replaceAll("\\(","");
+                        excelInventoryname = excelInventoryname.replaceAll("\\)","");
+                    }
+                    if(excelPack.contains("KG")){
+                        excelPack = excelPack+"*"+orderMapper.getXMkoudaiByName(excelDeliveryplace);//50KG*不扣袋
+                    }
+                    Map<String,Object> tinventorycode = orderMapper.getTinventorycodeByJX("%"+excelInventoryname+"%","%"+excelPack+"%",excelDeliveryplace);
                     retailTianrun.setTinventorycode(tinventorycode.get("code").toString());
                     sadatalist.get(i).setTinventorycode(tinventorycode.get("code").toString());
-                    // 销售不再关联 来源 单号
-                    //String sasourceVoucherDetailId = orderMapper.getSASourceVoucherDetailId(retailTianrun.getContractcode(),tinventorycode);
-                    //retailTianrun.setSasourceVoucherDetailId(sasourceVoucherDetailId);//查询出来源单据的明细ID
 
                     //进货明细 的 来源单据单据对应的明细行ID  以及  订单上 这一行的 蛋白差！
                     Map<String,Object> pusourceVoucherDetailMap = orderMapper.getPUSourceVoucherDetailId(retailTianrun.getContractcode(),tinventorycode.get("code").toString());
                     if(pusourceVoucherDetailMap!=null){
+                        //retailTianrun.setSourceVoucherCode("xxxxxxxx");//如果找不到，就用 contractcode 本身
                         retailTianrun.setPusourceVoucherDetailId(pusourceVoucherDetailMap.get("id").toString());
                         retailTianrun.setDanbaicha(pusourceVoucherDetailMap.get("danbaicha").toString());
                         if(pusourceVoucherDetailMap.get("taxPrice") != null && !"".equals(pusourceVoucherDetailMap.get("taxPrice").toString())){
@@ -109,14 +129,17 @@ public class BasicServiceImpl implements BasicService {
                         retailTianrun.setProjectCode(tinventorycode.get("projectCode").toString());
                         retailTianrun.setTaxnum(tinventorycode.get("taxnum").toString());// 9  taxnum
                     }else{
-                        return "未找到对于的采购订单（合同号），请先检查单据！";
+                        return pufailstr + "," +  "第"+(i+2)+"行失败，原因是：未找到对应的采购订单（合同号），请先检查单据！";
                     }
+                    sadatalist.get(i).setTaxprice(sataxprice);
+                    //retailTianrun.setPlansalenumbers(plansalenumberslist.get(i).toString());
+                    //注意 检查  合并和非合并的情况下， 数量是不是对的
                 }
 
-                String token = orderMapper.getTokenByAppKey("iiQG1E7l");// 天润的appkey
+                //------------------------------------------------------------------------------------------------//
                 //根据 excel 的内容，自动生成 进货单，都是 保存状态 ！
+                String token = orderMapper.getTokenByAppKey("iiQG1E7l");// 天润的appkey
                 List<String> pujsons = ListToJson.getPuJsonByList(datalist);
-                String pufailstr = "";
                 for(int i=0;i<pujsons.size();i++){
                     String pujson = pujsons.get(i);
                     String createorderflag = datalist.get(i).getCreateorderflag();//生单标志
@@ -133,7 +156,7 @@ public class BasicServiceImpl implements BasicService {
                             JSONObject pujsonObject = JSONObject.parseObject(apiresult1);
                             String returncode = pujsonObject.getString("code"); // 0代表成功，999代表有业务异常
                             if(!"0".equals(returncode)){
-                                pufailstr = pufailstr + "," + (i+2) ;
+                                pufailstr = pufailstr + "," + (i+2) + "行失败，原因是：" + JSONObject.parseObject(apiresult1).getString("message") ;
                             }
                         }catch (Exception e){
                             e.printStackTrace();
@@ -144,9 +167,7 @@ public class BasicServiceImpl implements BasicService {
                 //------------------------------------------------------------------------------------------------//
                 //根据 excel 的内容，自动生成 销货单 ，都是 保存状态 ！
                 List<String> sajsons = ListToJson.getSaJsonByList(sadatalist);
-                String safailstr = "";
                 for(int i=0;i<sajsons.size();i++){
-                    String sacode = sadatalist.get(i).getSacode();
                     String sajson = sajsons.get(i);
                     String createorderflag = sadatalist.get(i).getCreateorderflag();//生单标志
                     if("2".equals(createorderflag) || "1".equals(createorderflag)){
@@ -163,13 +184,14 @@ public class BasicServiceImpl implements BasicService {
                             //如果这个销货单 创建 成功，且这个 客户 有 预收款 ，那就按 当前的 销售含税金额 进行 自动生成 使用预收的明细
                             //客户 有 多笔 预收款时。 销货单使用预收是 按 时间 先后顺序 进行冲抵，有余额就冲（但是 要考虑到 押金转预收 再冲抵的情况）
                             if(apiresult2 == null || "null".equals(apiresult2)){
-                                RetailTianrun retailTianrun = sadatalist.get(i);//拿到对应的 原始参数
+                                //由于 现在 销货单不会再使用预收了，天润的系统里面根本就不会有预收款了！
+                                /*RetailTianrun retailTianrun = sadatalist.get(i);//拿到对应的 原始参数
                                 String tcustmorcode = retailTianrun.getTcustmorcode();//客户编号
                                 List<Map<String,Object>> custmoryushoulist = orderMapper.getCustmoryushouByCode(tcustmorcode);
+                                //只有一个预收款
                                 if(custmoryushoulist != null && custmoryushoulist.size() == 1
                                         && custmoryushoulist.get(0).get("code") != null
                                         && !"NULL".equals(custmoryushoulist.get(0).get("code").toString())){
-                                    //只有一个预收款
                                     Map<String,Object> custmoryushou = custmoryushoulist.get(0);
                                     Float amount = Float.valueOf(custmoryushou.get("amount").toString());
                                     if(amount >= (Float.valueOf(retailTianrun.getPlansalenumbers()) * Float.valueOf(retailTianrun.getTaxprice()))){
@@ -179,10 +201,10 @@ public class BasicServiceImpl implements BasicService {
                                         orderMapper.addSAYuShou(custmoryushou);// 这个 日期 要 改成 预收款的 日期
                                     }
                                 }
+                                //有多个预收款!
                                 if(custmoryushoulist != null && custmoryushoulist.size() > 1
                                         && custmoryushoulist.get(0).get("code") != null
                                         && !"NULL".equals(custmoryushoulist.get(0).get("code").toString())){
-                                    //有多个预收款!
                                     String totalyushoAmount = orderMapper.getTotalYushouAmountByCode(tcustmorcode);
                                     if(Float.valueOf(totalyushoAmount) >= (Float.valueOf(retailTianrun.getPlansalenumbers()) * Float.valueOf(retailTianrun.getTaxprice()))){
                                         //说明 有 足够的 预收款 可以用！（只不过是 多个预收组合的）
@@ -210,9 +232,10 @@ public class BasicServiceImpl implements BasicService {
                                         mapyushou.put("sacode",sacode);
                                         orderMapper.updateSAYuShou(mapyushou);
                                     }
-                                }
+                                }*/
                             }else{
-                                safailstr = safailstr + "," + (i+2) ;
+                                //创建销货单失败，记录下失败的行数！并返回
+                                safailstr = safailstr + "," + (i+2) + "行失败，原因是：" + JSONObject.parseObject(apiresult2).getString("message") ;
                             }
                         }catch (Exception e){
                             e.printStackTrace();
@@ -220,7 +243,7 @@ public class BasicServiceImpl implements BasicService {
                     }
                 }
                 if("".equals(pufailstr) && "".equals(safailstr)){
-                    return "全部成功，没有失败！";
+                    return "全部成功！";
                 }else{
                     return "生成进货单时，第 ： " + pufailstr + " 失败，生成销货单时，第：" + safailstr + "失败";
                 }
@@ -233,13 +256,19 @@ public class BasicServiceImpl implements BasicService {
         }
     }
 
+
+    // 销货单 保存后 的时候
+    // 1. 判断 导入油厂和选单油厂是否一致（前端已完成）
+    // 2. 查询当前数量 和 订单已经执行的数量 是否超过 订单总数  已经  当前单据时间 是否在 订单的有效时间内
+    // 放弃！ 3. 如果 客户的 自定义项 是 先款，还需与判断 还能使用的预收款金额 》=  此单的销售金额 。否则，不卖！
+    // 4. 如果上面三点都没问题才允许保存！ （再 通过 保存的消息订阅 来更新明细里面的  司机 4 个信息）
     @Override
     public String getResultBySaParams(String code, String xsddcode, String codeday, String numbers, String totalamount, String customername,String skcodes) {
         Map<String,Object> result = new HashMap<String,Object>();
         try {
             // 如果使用了 定金 ,合同执行金额
             // skcode : ，",213e23ede,12e3dqd243,12243d4d"
-            if(skcodes != null && !"".equals(skcodes)){
+            /*if(skcodes != null && !"".equals(skcodes)){
                 String yushoutypes = "";
                 for(String skcode : skcodes.split(",")){
                     if(skcode != null && !"".equals(skcode)){
@@ -248,42 +277,68 @@ public class BasicServiceImpl implements BasicService {
                     }
                 }
                 String yushoutotal = orderMapper.getRealYushouTypeByTcustmorname(customername);
-                if(Float.valueOf(yushoutotal) >= Float.valueOf(totalamount) && yushoutypes.contains("定金")){
+                if(yushoutotal !=null && !"".equals(yushoutotal) && Float.valueOf(yushoutotal) >= Float.valueOf(totalamount) && yushoutypes.contains("定金")){
                     result.put("code","9999");
                     result.put("msg","此客户预收款足够，不能使用定金！");
                     JSONObject job = new JSONObject(result);
                     return job.toJSONString();
                 }
-            }
+            }*/
 
-            Map<String,Object> rule3 = orderMapper.getCustmorRule3Byname(customername);
+            /*Map<String,Object> rule3 = orderMapper.getCustmorRule3Byname(customername);
             if("先款".equals(rule3.get("sktype").toString()) && Float.valueOf(rule3.get("totalamount").toString()) < Float.valueOf(totalamount) ){
                 result.put("code","9999");
                 result.put("msg","此客户是先款客户，并且 预收款不够用了！");
                 JSONObject job = new JSONObject(result);
                 return job.toJSONString();
-            }
-            //查询这个销售订单 后续 所有销货单（保存/审核中/审核）的数量总数，以及 这个 订单对应的 表头上的 开始日期-结束日期
+            }*/
+
+            //查询这个销售订单 后续 所有销货单（保存/审核中/审核）的数量总数，以及 这个 订单对应的 表头上的 开始日期-结束日期  。但是不包含当前销货单哈！
             //表头上 这个地方  选单之后 是空白的！！！
-            Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode);
+            Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode,code);
             if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
                 String totalNumbers = xsddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量
-                String ddNumbers = xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
+                String ddNumbers = orderMapper.getddNumbersByCode(xsddcode); //xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
                 String starteDate = xsddmap.get("startdate").toString();// 销售订单 明细里面的开始时间
                 String enddate = xsddmap.get("enddate").toString();//  销售订单 明细里面的结束时间
-                if(DateUtil.isEffectiveDate(new SimpleDateFormat().parse(codeday),
-                        new SimpleDateFormat().parse(starteDate),
-                        new SimpleDateFormat().parse(enddate))
-                        && (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) <= Float.valueOf(ddNumbers) ){
+                if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
+                        new SimpleDateFormat("yyyyMMdd").parse(starteDate),
+                        new SimpleDateFormat("yyyyMMdd").parse(enddate))
+                        && (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) <= Float.valueOf(ddNumbers) -5 ){
                     result.put("code","0000");
                     result.put("msg","允许保存");
                     JSONObject job = new JSONObject(result);
                     return job.toJSONString();
                 }else{
-                    result.put("code","9999");
-                    result.put("msg","超出订单执行数量 或者 时间 ，不允许保存！");
-                    JSONObject job = new JSONObject(result);
-                    return job.toJSONString();
+                    if( (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) > Float.valueOf(ddNumbers) -5 ){
+                        //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
+                        String djje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(xsddcode)));
+                        if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                            String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                            orderMapper.addQTYSBySAStr(qtsycode,xsddcode,djje);
+                            int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                            orderMapper.addQTYSdetailByStr(id+"",djje);
+                            //插入 应收应付余额明细表
+                            orderMapper.addYSWLByQTYSCode(qtsycode);
+                        }
+                        result.put("code","8888");
+                        result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }
+                    if(!DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
+                            new SimpleDateFormat("yyyyMMdd").parse(starteDate),
+                            new SimpleDateFormat("yyyyMMdd").parse(enddate))){
+                        result.put("code","8888");
+                        result.put("msg","超出订单执行时间范围!在备注中填入超时两个字，进入审批流！");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }else{
+                        result.put("code","9999");
+                        result.put("msg","不允许保存！");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }
                 }
             }else{
                 result.put("code","9999");
@@ -299,4 +354,92 @@ public class BasicServiceImpl implements BasicService {
             return job.toJSONString();
         }
     }
+
+    @Override
+    public String auqtysByCode(String code, String djje, String yn, String type) {
+        if("add".equals(type) && "是".equals(yn) && djje != null && !"".equals(djje)){
+            //生成的这个其他应收单的单号
+            String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+            //增加其他应收的定金
+            if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                orderMapper.addQTYSByStr(qtsycode,code,djje);
+                int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                orderMapper.addQTYSdetailByStr(id+"",djje);
+                //插入 应收应付余额明细表
+                orderMapper.addYSWLByQTYSCode(qtsycode);
+            }
+        }else{
+            //直接 删除 其他应收单（priuserdefnvc1 是 code）
+            orderMapper.deleteQTYSdetail(code);
+            orderMapper.deleteQTYS(code);
+            //删除 应收应付余额明细表
+            orderMapper.deleteYSWLByQTYSCode(code);
+        }
+        return "";
+    }
+
+    @Override
+    public void dealQTYSBySaOrderCode(String code) {
+        synchronized (this){
+            //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单总数量/报价单总数量）
+            //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
+            Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
+            if(params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
+                    && "103".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 报价单哦
+                String bjcode = params.get("SourceVoucherCode").toString();//报价单单号
+                String bjct = params.get("bjct").toString();//报价单总数量
+                String bjdjje = params.get("bjdjje").toString();//报价单总数量
+                String sact = params.get("sact").toString();//销售订单总数量
+                String sadjje = params.get("pubuserdefdecm1").toString();//销售订单上的 定金金额（表头上的）合同定金
+                //String yn = params.get("yn").toString();//销售订单上的 是否生成  来 自动生成 其他应收的蓝字
+
+                //增加其他应收的定金(红字！)
+                String redqtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
+                if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
+                    orderMapper.addQTYSBySAStr(redqtsycode,code, reddjje);
+                    int redid = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                    orderMapper.addQTYSdetailByStr(redid+"",reddjje);
+                    //插入 应收应付余额明细表
+                    orderMapper.addYSWLByQTYSCode(redqtsycode);
+                }
+                //再生成蓝字的QTYS
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                    String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    //增加其他应收的定金
+                    if(sadjje != null && !"".equals(sadjje) && Float.valueOf(sadjje) != 0){
+                        orderMapper.addQTYSBySAStr(qtsycode,code,sadjje);
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYSdetailByStr(id+"",sadjje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYSCode(qtsycode);
+                    }
+                }
+            }else{
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                    //如果没有来源单号，直接生成 QTYS
+                    String qtyscode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    String djje = params.get("pubuserdefdecm1").toString();
+                    //增加其他应收的定金
+                    if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                        orderMapper.addQTYSBySAStr(qtyscode,code,djje);
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYSdetailByStr(id+"",djje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYSCode(qtyscode);
+                    }
+                }
+            }
+        }
+    }
+
+
+    @Override
+    public void deleteQTYSByCode(String code) {
+        synchronized (this){
+            orderMapper.deleteQTYSdetail(code);
+            orderMapper.deleteQTYS(code);
+        }
+    }
+
 }

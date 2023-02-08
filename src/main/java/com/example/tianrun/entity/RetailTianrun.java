@@ -94,6 +94,9 @@ public class RetailTianrun extends BaseRowModel {
     @ExcelProperty(index = 28) //项目编号（实际上是根据油厂的名称查出来的）
     private String projectCode;
 
+    @ExcelProperty(index = 29) //来源单据编号
+    private String sourceVoucherCode;
+
     public String getPlannedpickingdate() {
         return plannedpickingdate;
     }
@@ -326,6 +329,14 @@ public class RetailTianrun extends BaseRowModel {
         this.projectCode = projectCode;
     }
 
+    public String getSourceVoucherCode() {
+        return sourceVoucherCode;
+    }
+
+    public void setSourceVoucherCode(String sourceVoucherCode) {
+        this.sourceVoucherCode = sourceVoucherCode;
+    }
+
     @Override
     public String toString() {
         return "RetailTianrun{" +
@@ -358,6 +369,7 @@ public class RetailTianrun extends BaseRowModel {
                 ", danbaicha='" + danbaicha + '\'' +
                 ", sacode='" + sacode + '\'' +
                 ", projectCode='" + projectCode + '\'' +
+                ", sourceVoucherCode='" + sourceVoucherCode + '\'' +
                 '}';
     }
 }
