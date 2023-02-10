@@ -96,28 +96,51 @@ public class TokenController {
                 || "SaleOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
-                // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
+                // 1 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
                 orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
-            }
-
-            // 销售订单审核  处理 定金 的问题
-            if("SaleOrder_Audit".equals(job.getString("msgType"))){
-                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
-                String code = jrb.getBizContent().getVoucherCode();//销售订单单号
+                //销售订单的定金 也是 在这里 处理了！！！
+                // 2. 因为：销售订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
                 //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单数量/报价单数量）
                 //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
-                basicService.dealQTYSBySaOrderCode(code);
+                basicService.dealQTYSBySaOrderCode(vourcherCode);
+
+                //3 根据 这个 code -》priuserdefnvc2  删除 对于的 其他应收单( 放到上面这个 serviceimpl 里面去做了)
+                //basicService.deleteQTYSByCode(vourcherCode);
             }
 
-            // 销售订单 弃审  处理 定金 的问题
-            if("SaleOrder_UnAudit".equals(job.getString("msgType"))){
+            // ------------------------------------------------------------------------------------------//
+            // 取消了 采购订单  审核  或者  弃审 来 做的 2和3 （挨着的上面 2和 3 ）
+            // ------------------------------------------------------------------------------------------//
+
+
+            // 采购订单（合同）变更——》更新 后，保存, 处理 定金（其他应付的问题）
+            if("PurchaseOrder_Change".equals(job.getString("msgType"))
+                    || "PurchaseOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
-                String code = jrb.getBizContent().getVoucherCode();//销售订单单号
-                //根据 这个 code -》priuserdefnvc2  删除 对于的 其他应收单
-                basicService.deleteQTYSByCode(code);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+                //采购订单的定金 也是 在这里 处理了！！！
+                // 2. 因为：采购订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
+                // 如果有来源单号（请购单单号）：先用请购单号 生成 其他应付（红字），金额是：请购单上的定金金额*（采购订单数量/请购单数量）
+                // 再生成 一个 其他应付单（蓝字），金额是：采购订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应付的蓝字（合同定金 ）
+                basicService.dealQTYFBySaOrderCode(vourcherCode);
             }
 
-            //用来处理复制行的问题
+            //销货单审核，用来处理 使用定金的问题，并且 无需返回前端，默认（大于订单数量-5就自动使用定金）
+            if("SaleDelivery_Audit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String code = jrb.getBizContent().getVoucherCode();//销货单 单号
+                basicService.getResultBySaParams(code);
+            }
+
+            //进货单审核，用来处理 使用定金的问题，并且 无需返回前端，默认（大于订单数量-5就自动使用定金）
+            if("PuArrival_Audit".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String code = jrb.getBizContent().getVoucherCode();//进货单 单号
+                basicService.getResultByPUParams(code);
+            }
+
+
+            // 用来处理复制行的问题
             // 销货单保存（修改） 这个只是用来处理，销货单选单后，客户不想复制明细的个别字段内容，所以通过SQL复制一下
             if("SaleDelivery_Update".equals(job.getString("msgType"))
                     || "SaleDelivery_Change".equals(job.getString("msgType"))){
@@ -164,6 +187,7 @@ public class TokenController {
     }
 
 
+    // 2023-02-09 这个方法要放弃，放到 消息订阅的 销货单 审核里面。 保存 前 页面提示没有意义了，我可以直接点审核 绕开保存！
     // 销货单 保存后 的时候
     // 1. 判断 导入油厂和选单油厂是否一致（前端已完成）
     // 2. 查询当前数量 和 订单已经执行的数量 是否超过 订单总数  已经  当前单据时间 是否在 订单的有效时间内
@@ -172,32 +196,46 @@ public class TokenController {
     @RequestMapping(value="/getDistricntKC", method = {RequestMethod.GET,RequestMethod.POST})
     public @ResponseBody String getDistricntKC(HttpServletRequest request, HttpServletResponse response) throws Exception{
         Map<String,Object> result = new HashMap<String,Object>();
-        String code = request.getParameter("code");//当前的 单据编号(销货单)
+        /*String code = request.getParameter("code");//当前的 单据编号(销货单)
         String xsddcode = request.getParameter("xsddcode");//当前的单据 对应的  销售订单单据编号
         String codeday = request.getParameter("codeday");//当前的 单据日期
         String numbers = request.getParameter("numbers");//当前单据的总数量
         String totalamount = request.getParameter("totalamount");//当前单据的总金额(含税)
         String customername = request.getParameter("customername");//客户名称
         String skcode = request.getParameter("skcode");//,'xxxxx','xxxxxxx','xxxxxx'  使用预收的收款单单号
-        String saresult = basicService.getResultBySaParams(code,xsddcode,codeday,numbers,totalamount,customername,skcode);
-        return saresult;
+        String saresult = basicService.getResultBySaParams(code,xsddcode,codeday,numbers,totalamount,customername,skcode);*/
+        return "";
     }
 
 
-    // 看下一个！！！
-    //失效！！！！（报价单 审核 或者 弃审后，根据 单据编号， 自动生成 / 删除 对应的 其他应收单）
-    //报价单：是否生成定金 默认是 空的。在保存审核后 不自动生成，
+    //报价单 审核 或者 弃审后，根据 单据编号， 自动生成 / 删除 对应的 其他应收
+    //报价单：是否生成定金 默认是 空的。在保存审核后 不自动生成
     //更改到  指定人（zt_user 对应的ID） 进行 变更，变更后 再保存 才可以 自动生成定金
     //http://47.92.249.206:9991/tianrun/token/auqtysByCode?code=20230202-12&djje=14875&yn=&type=add
     @RequestMapping(value="/auqtysByCode", method = {RequestMethod.GET,RequestMethod.POST})
     public @ResponseBody String auqtysByCode(HttpServletRequest request, HttpServletResponse response) throws Exception{
-        Map<String,Object> result = new HashMap<String,Object>();
         String code = request.getParameter("code");
         String djje = request.getParameter("djje");
         String yn = request.getParameter("yn");
         String type = request.getParameter("type");
         synchronized (this){
             String saresult = basicService.auqtysByCode(code,djje,yn,type);
+            return saresult;
+        }
+    }
+
+
+    //请购单：是否生成定金 默认是 空的。在保存审核后 不自动生成
+    //更改到  指定人（zt_user 对应的ID） 进行 变更，变更后 再保存 才可以 自动生成定金 ，其他应付单
+    //http://47.92.249.206:9991/tianrun/token/auqtyfByCode?code=20230202-12&djje=14875&yn=&type=add
+    @RequestMapping(value="/auqtyfByCode", method = {RequestMethod.GET,RequestMethod.POST})
+    public @ResponseBody String auqtyfByCode(HttpServletRequest request, HttpServletResponse response) throws Exception{
+        String code = request.getParameter("code");
+        String djje = request.getParameter("djje");
+        String yn = request.getParameter("yn");
+        String type = request.getParameter("type");
+        synchronized (this){
+            String saresult = basicService.auqtyfByCode(code,djje,yn,type);
             return saresult;
         }
     }

@@ -263,44 +263,23 @@ public class BasicServiceImpl implements BasicService {
     // 放弃！ 3. 如果 客户的 自定义项 是 先款，还需与判断 还能使用的预收款金额 》=  此单的销售金额 。否则，不卖！
     // 4. 如果上面三点都没问题才允许保存！ （再 通过 保存的消息订阅 来更新明细里面的  司机 4 个信息）
     @Override
-    public String getResultBySaParams(String code, String xsddcode, String codeday, String numbers, String totalamount, String customername,String skcodes) {
+    public String getResultBySaParams(String code) {
         Map<String,Object> result = new HashMap<String,Object>();
         try {
-            // 如果使用了 定金 ,合同执行金额
-            // skcode : ，",213e23ede,12e3dqd243,12243d4d"
-            /*if(skcodes != null && !"".equals(skcodes)){
-                String yushoutypes = "";
-                for(String skcode : skcodes.split(",")){
-                    if(skcode != null && !"".equals(skcode)){
-                        String yushoutype = orderMapper.getYushouTypeByCode(skcode);
-                        yushoutypes = yushoutypes + ","+yushoutype;
-                    }
-                }
-                String yushoutotal = orderMapper.getRealYushouTypeByTcustmorname(customername);
-                if(yushoutotal !=null && !"".equals(yushoutotal) && Float.valueOf(yushoutotal) >= Float.valueOf(totalamount) && yushoutypes.contains("定金")){
-                    result.put("code","9999");
-                    result.put("msg","此客户预收款足够，不能使用定金！");
-                    JSONObject job = new JSONObject(result);
-                    return job.toJSONString();
-                }
-            }*/
-
-            /*Map<String,Object> rule3 = orderMapper.getCustmorRule3Byname(customername);
-            if("先款".equals(rule3.get("sktype").toString()) && Float.valueOf(rule3.get("totalamount").toString()) < Float.valueOf(totalamount) ){
-                result.put("code","9999");
-                result.put("msg","此客户是先款客户，并且 预收款不够用了！");
-                JSONObject job = new JSONObject(result);
-                return job.toJSONString();
-            }*/
-
+            //根据 销货单的单号，查询 所有关联信息
+            Map<String,Object> saresult = orderMapper.getSadetailByCode(code);//就为了获取下面3个，真TM SB 代码！
+            String xsddcode = saresult.get("xsddcode").toString();//当前的单据 对应的  销售订单单据编号
+            String codeday = saresult.get("codeday").toString();//当前的 单据日期
+            String numbers = saresult.get("numbers").toString();//当前单 据的总数量
             //查询这个销售订单 后续 所有销货单（保存/审核中/审核）的数量总数，以及 这个 订单对应的 表头上的 开始日期-结束日期  。但是不包含当前销货单哈！
             //表头上 这个地方  选单之后 是空白的！！！
             Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode,code);
             if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
                 String totalNumbers = xsddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量
+                //这个只能 单独 去查一次！
                 String ddNumbers = orderMapper.getddNumbersByCode(xsddcode); //xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
-                String starteDate = xsddmap.get("startdate").toString();// 销售订单 明细里面的开始时间
-                String enddate = xsddmap.get("enddate").toString();//  销售订单 明细里面的结束时间
+                String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
+                String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
                 if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
                         new SimpleDateFormat("yyyyMMdd").parse(starteDate),
                         new SimpleDateFormat("yyyyMMdd").parse(enddate))
@@ -355,6 +334,79 @@ public class BasicServiceImpl implements BasicService {
         }
     }
 
+
+    //进货单  处理 定金的逻辑
+    @Override
+    public String getResultByPUParams(String code) {
+        Map<String,Object> result = new HashMap<String,Object>();
+        try {
+            //根据 进货单的单号，查询 所有关联信息
+            Map<String,Object> saresult = orderMapper.getPudetailByCode(code);//就为了获取下面3个，真TM SB 代码！
+            String cgddcode = saresult.get("cgddcode").toString();//当前的单据 对应的  采购订单单据编号
+            String codeday = saresult.get("codeday").toString();//当前的 单据日期
+            String numbers = saresult.get("numbers").toString();//当前单 据的总数量
+
+            Map<String,Object> xsddmap = orderMapper.getCgddmapByCode(cgddcode,code);
+            if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
+                String totalNumbers = xsddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量
+                //这个只能 单独 去查一次！
+                String ddNumbers = orderMapper.getcgNumbersByCode(cgddcode);
+                String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
+                String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
+                if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
+                        new SimpleDateFormat("yyyyMMdd").parse(starteDate),
+                        new SimpleDateFormat("yyyyMMdd").parse(enddate))
+                        && (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) <= Float.valueOf(ddNumbers) -5 ){
+                    result.put("code","0000");
+                    result.put("msg","允许保存");
+                    JSONObject job = new JSONObject(result);
+                    return job.toJSONString();
+                }else{
+                    if( (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) > Float.valueOf(ddNumbers) -5 ){
+                        //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
+                        String djje = ""+ -1*(Float.valueOf( orderMapper.getQTYFcanuseByCode(cgddcode)));
+                        if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                            String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                            orderMapper.addQTYFByPUStr(qtsycode,cgddcode,djje);
+                            int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
+                            orderMapper.addQTYFdetailByStr(id+"",djje);
+                            //插入 应收应付余额明细表
+                            orderMapper.addYSWLByQTYFCode(qtsycode);
+                        }
+                        result.put("code","8888");
+                        result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }
+                    if(!DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
+                            new SimpleDateFormat("yyyyMMdd").parse(starteDate),
+                            new SimpleDateFormat("yyyyMMdd").parse(enddate))){
+                        result.put("code","8888");
+                        result.put("msg","超出订单执行时间范围!在备注中填入超时两个字，进入审批流！");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }else{
+                        result.put("code","9999");
+                        result.put("msg","不允许保存！");
+                        JSONObject job = new JSONObject(result);
+                        return job.toJSONString();
+                    }
+                }
+            }else{
+                result.put("code","9999");
+                result.put("msg","销售订单异常，查不到对应数据！");
+                JSONObject job = new JSONObject(result);
+                return job.toJSONString();
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            result.put("code","9999");
+            result.put("msg","程序异常！");
+            JSONObject job = new JSONObject(result);
+            return job.toJSONString();
+        }
+    }
+
     @Override
     public String auqtysByCode(String code, String djje, String yn, String type) {
         if("add".equals(type) && "是".equals(yn) && djje != null && !"".equals(djje)){
@@ -368,12 +420,36 @@ public class BasicServiceImpl implements BasicService {
                 //插入 应收应付余额明细表
                 orderMapper.addYSWLByQTYSCode(qtsycode);
             }
-        }else{
+        }else{//实际上 现在 没有这个了！！！  如果生成多了，让客户自己去 删除！
             //直接 删除 其他应收单（priuserdefnvc1 是 code）
             orderMapper.deleteQTYSdetail(code);
             orderMapper.deleteQTYS(code);
             //删除 应收应付余额明细表
             orderMapper.deleteYSWLByQTYSCode(code);
+        }
+        return "";
+    }
+
+
+    @Override
+    public String auqtyfByCode(String code, String djje, String yn, String type) {
+        if("add".equals(type) && "是".equals(yn) && djje != null && !"".equals(djje)){
+            //生成的这个其他应付单的单号
+            String qtyfcode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+            //增加其他应付的定金
+            if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                orderMapper.addQTYFByStr(qtyfcode,code,djje);
+                int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
+                orderMapper.addQTYFdetailByStr(id+"",djje);
+                //插入 应收应付余额明细表
+                orderMapper.addYSWLByQTYFCode(qtyfcode);
+            }
+        }else{//实际上 现在 没有这个了！！！  如果生成多了，让客户自己去 删除！
+            //直接 删除 其他应付单（priuserdefnvc1 是 code）
+            //orderMapper.deleteQTYFdetail(code);
+            //orderMapper.deleteQTYF(code);
+            //删除 应收应付余额明细表
+            //orderMapper.deleteYSWLByQTYFCode(code);
         }
         return "";
     }
@@ -392,19 +468,18 @@ public class BasicServiceImpl implements BasicService {
                 String sact = params.get("sact").toString();//销售订单总数量
                 String sadjje = params.get("pubuserdefdecm1").toString();//销售订单上的 定金金额（表头上的）合同定金
                 //String yn = params.get("yn").toString();//销售订单上的 是否生成  来 自动生成 其他应收的蓝字
-
-                //增加其他应收的定金(红字！)
-                String redqtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
-                String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
-                if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
-                    orderMapper.addQTYSBySAStr(redqtsycode,code, reddjje);
-                    int redid = Integer.valueOf(orderMapper.getMaxidByQTYS());
-                    orderMapper.addQTYSdetailByStr(redid+"",reddjje);
-                    //插入 应收应付余额明细表
-                    orderMapper.addYSWLByQTYSCode(redqtsycode);
-                }
-                //再生成蓝字的QTYS
                 if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                    //先增加其他应收的定金(红字！)
+                    String redqtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
+                    if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
+                        orderMapper.addQTYSBySAStr(redqtsycode,code, reddjje);
+                        int redid = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYSdetailByStr(redid+"",reddjje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYSCode(redqtsycode);
+                    }
+                    //再生成蓝字的QTYS
                     String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                     //增加其他应收的定金
                     if(sadjje != null && !"".equals(sadjje) && Float.valueOf(sadjje) != 0){
@@ -433,6 +508,57 @@ public class BasicServiceImpl implements BasicService {
         }
     }
 
+    @Override
+    public void dealQTYFBySaOrderCode(String code) {
+        synchronized (this){
+            Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
+            if(params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
+                    && "103".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 请购单
+                String bjcode = params.get("SourceVoucherCode").toString();//请购单单号
+                String bjct = params.get("bjct").toString();//请购单总数量
+                String bjdjje = params.get("bjdjje").toString();//请购单总金额
+                String sact = params.get("sact").toString();//采购订单总数量
+                String sadjje = params.get("pubuserdefdecm1").toString();//采购订单上的 定金金额（表头上的）合同定金
+                //String yn = params.get("yn").toString();//采购订单上的 是否生成  来 自动生成 其他应付的蓝字
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                    //先增加其他应收的定金(红字！)
+                    String redqtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
+                    if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
+                        orderMapper.addQTYFByPUStr(redqtsycode,code, reddjje);
+                        int redid = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYFdetailByStr(redid+"",reddjje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYFCode(redqtsycode);
+                    }
+                    //再生成蓝字的QTYS
+                    String qtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    //增加其他应收的定金
+                    if(sadjje != null && !"".equals(sadjje) && Float.valueOf(sadjje) != 0){
+                        orderMapper.addQTYFByPUStr(qtsycode,code,sadjje);
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYFdetailByStr(id+"",sadjje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYFCode(qtsycode);
+                    }
+                }
+            }else{
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                    //如果没有来源单号，直接生成 QTYS
+                    String qtyscode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                    String djje = params.get("pubuserdefdecm1").toString();
+                    //增加其他应收的定金
+                    if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                        orderMapper.addQTYFByPUStr(qtyscode,code,djje);
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        orderMapper.addQTYFdetailByStr(id+"",djje);
+                        //插入 应收应付余额明细表
+                        orderMapper.addYSWLByQTYFCode(qtyscode);
+                    }
+                }
+            }
+        }
+    }
 
     @Override
     public void deleteQTYSByCode(String code) {

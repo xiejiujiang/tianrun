@@ -26,6 +26,8 @@ public interface orderMapper {
 
     Map<String,Object>  getXsddmapByCode(@Param("xsddcode") String xsddcode,@Param("code") String code);
 
+    Map<String,Object>  getCgddmapByCode(@Param("cgddcode") String cgddcode,@Param("code") String code);
+
     String getTpartencodeByByJX(String partnerjx);//根据 供应商简写 返回 供应商编码（T+有简写）
 
     String getTpartencodeByByConCode(String pucode);//根据 excel 采购合同号查询对应的供应商编号
@@ -76,11 +78,19 @@ public interface orderMapper {
 
     void addQTYSByStr(String qtyscode,String code,String djje);//通过 报价单 生成
 
+    void addQTYFByStr(String qtyfcode,String code,String djje);//通过 请购单 生成
+
     void addQTYSBySAStr(String qtyscode,String code,String djje);//通过 销售订单 生成
+
+    void addQTYFByPUStr(String qtyscode,String code,String djje);//通过 采购订单 生成
 
     Integer getMaxidByQTYS();
 
+    Integer getMaxidByQTYF();
+
     void addQTYSdetailByStr(String id,String djje);
+
+    void addQTYFdetailByStr(String id,String djje);
 
     void deleteQTYSdetail(String code);
 
@@ -90,9 +100,19 @@ public interface orderMapper {
 
     String getQTSYcanuseByCode(String xsddcode);
 
+    String getQTYFcanuseByCode(String code);
+
     String  getddNumbersByCode(String xsddcode);
+
+    String getcgNumbersByCode(String code);
 
     void addYSWLByQTYSCode(String qtsycode);
 
+    void addYSWLByQTYFCode(String qtyfcode);
+
     void deleteYSWLByQTYSCode(String qtsycode);
+
+    Map<String,Object> getSadetailByCode(String code);
+
+    Map<String,Object> getPudetailByCode(String code);
 }
