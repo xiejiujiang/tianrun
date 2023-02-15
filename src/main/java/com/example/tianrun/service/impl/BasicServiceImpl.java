@@ -460,15 +460,17 @@ public class BasicServiceImpl implements BasicService {
             //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单总数量/报价单总数量）
             //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
             Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
-            if(params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
+            if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
                     && "103".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 报价单哦
                 String bjcode = params.get("SourceVoucherCode").toString();//报价单单号
                 String bjct = params.get("bjct").toString();//报价单总数量
                 String bjdjje = params.get("bjdjje").toString();//报价单总数量
                 String sact = params.get("sact").toString();//销售订单总数量
                 String sadjje = params.get("pubuserdefdecm1").toString();//销售订单上的 定金金额（表头上的）合同定金
-                //String yn = params.get("yn").toString();//销售订单上的 是否生成  来 自动生成 其他应收的蓝字
-                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+
+                //是否是 某人，且 是否 要 生成定金！ 麻烦把采购环节（请购和采购订单）中生成订金的操作放给王丹。销售的放给叶新蓉
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
+                        && params.get("bgr") != null && !"".equals(params.get("bgr").toString()) && "46".equals(params.get("bgr").toString())){
                     //先增加其他应收的定金(红字！)
                     String redqtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                     String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
@@ -491,7 +493,9 @@ public class BasicServiceImpl implements BasicService {
                     }
                 }
             }else{
-                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                //是否是 某人，且 是否 要 生成定金！ 麻烦把采购环节（请购和采购订单）中生成订金的操作放给王丹。销售的放给叶新蓉
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
+                        && params.get("bgr") != null && !"".equals(params.get("bgr").toString()) && "46".equals(params.get("bgr").toString())){
                     //如果没有来源单号，直接生成 QTYS
                     String qtyscode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                     String djje = params.get("pubuserdefdecm1").toString();
@@ -511,16 +515,17 @@ public class BasicServiceImpl implements BasicService {
     @Override
     public void dealQTYFBySaOrderCode(String code) {
         synchronized (this){
-            Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
-            if(params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
+            Map<String,Object> params = orderMapper.getPuorderDetailByCode(code);//此处查询 采购的 单据情况
+            if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
                     && "103".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 请购单
                 String bjcode = params.get("SourceVoucherCode").toString();//请购单单号
                 String bjct = params.get("bjct").toString();//请购单总数量
                 String bjdjje = params.get("bjdjje").toString();//请购单总金额
                 String sact = params.get("sact").toString();//采购订单总数量
                 String sadjje = params.get("pubuserdefdecm1").toString();//采购订单上的 定金金额（表头上的）合同定金
-                //String yn = params.get("yn").toString();//采购订单上的 是否生成  来 自动生成 其他应付的蓝字
-                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                //是否是 某人，且 是否 要 生成定金！ 麻烦把采购环节（请购和采购订单）中生成订金的操作放给王丹。销售的放给叶新蓉
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
+                    && params.get("bgr") != null && !"".equals(params.get("bgr").toString()) && "47".equals(params.get("bgr").toString())){
                     //先增加其他应收的定金(红字！)
                     String redqtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                     String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
@@ -536,21 +541,23 @@ public class BasicServiceImpl implements BasicService {
                     //增加其他应收的定金
                     if(sadjje != null && !"".equals(sadjje) && Float.valueOf(sadjje) != 0){
                         orderMapper.addQTYFByPUStr(qtsycode,code,sadjje);
-                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
                         orderMapper.addQTYFdetailByStr(id+"",sadjje);
                         //插入 应收应付余额明细表
                         orderMapper.addYSWLByQTYFCode(qtsycode);
                     }
                 }
             }else{
-                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())){
+                //是否是 某人，且 是否 要 生成定金！ 麻烦把采购环节（请购和采购订单）中生成订金的操作放给王丹。销售的放给叶新蓉
+                if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
+                        && params.get("bgr") != null && !"".equals(params.get("bgr").toString()) && "47".equals(params.get("bgr").toString())){
                     //如果没有来源单号，直接生成 QTYS
                     String qtyscode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
                     String djje = params.get("pubuserdefdecm1").toString();
                     //增加其他应收的定金
                     if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
                         orderMapper.addQTYFByPUStr(qtyscode,code,djje);
-                        int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                        int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
                         orderMapper.addQTYFdetailByStr(id+"",djje);
                         //插入 应收应付余额明细表
                         orderMapper.addYSWLByQTYFCode(qtyscode);

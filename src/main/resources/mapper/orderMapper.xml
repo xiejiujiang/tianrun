@@ -63,7 +63,7 @@
 
     <select id="getPudetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
         select SourceVoucherCode as cgddcode,voucherdate as codeday,
-               (select sum(quantity) from PU_PurchaseArrival_b where idSaleDeliveryDTO in (select id from PU_PurchaseArrival where code = #{code} )) as numbers
+               (select sum(quantity) from PU_PurchaseArrival_b where idPurchaseArrivalDTO in (select id from PU_PurchaseArrival where code = #{code} )) as numbers
         from PU_PurchaseArrival where code = #{code}
     </select>
 
@@ -123,19 +123,19 @@
     <update id="updateARAPDetailByPUBusinessCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount =( SELECT SUM(origTaxAmount) AS origTAXAmount FROM PU_PurchaseArrival_b
-                          WHERE idSaleDeliveryDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = #{vourcherCode}) ),
+                          WHERE idPurchaseArrivalDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) ),
             amount= ( SELECT SUM(origTaxAmount) AS origTAXAmount FROM PU_PurchaseArrival_b
-                      WHERE idSaleDeliveryDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = #{vourcherCode}) )
-        where businessCode = #{vourcherCode}
+                      WHERE idPurchaseArrivalDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) )
+        where businessCode = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})
     </update>
 
     <update id="updateARAPDetailBySABusinessCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount =( SELECT SUM(origTaxAmount) AS origTAXAmount FROM SA_SaleDelivery_b
-            WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = #{vourcherCode}) ),
+            WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) ),
         amount= ( SELECT SUM(origTaxAmount) AS origTAXAmount FROM SA_SaleDelivery_b
-                  WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = #{vourcherCode}) )
-        where businessCode = #{vourcherCode}
+                  WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode}) ) )
+        where businessCode = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})
     </update>
 
     <update id="updateSASAPreReceiveAmount" parameterType="java.lang.String">
@@ -259,7 +259,7 @@
         insert into CS_OtherReceiveVoucher(code,idbusinesstype,exchangeRate,OrigAmountSum,
         AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
         auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
-        HasRecordCredit,AuditedTime,priuserdefnvc2 )
+        HasRecordCredit,AuditedTime,priuserdefnvc2,PrintCount )
         values(#{qtyscode},72,1,#{djje},#{djje},189,428,GETDATE(),
             (select maker from SA_SaleQuotation where code = #{code}),
                GETDATE(),
@@ -271,7 +271,7 @@
             (select idcustomer from SA_SaleQuotation where code = #{code}),
             (select iddepartment from SA_SaleQuotation where code = #{code}),
             4,GETDATE(),
-            #{code},1,1,GETDATE(),#{code}
+            #{code},1,1,GETDATE(),#{code},0
         )
     </insert>
 
@@ -279,7 +279,7 @@
         insert into CS_OtherPaymentVoucher(code,idbusinesstype,exchangeRate,OrigAmountSum,
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
-                                           HasRecordCredit,AuditedTime,priuserdefnvc2 )
+                                           AuditedTime,priuserdefnvc2,PrintCount)
         values(#{qtyfcode},69,1,#{djje},#{djje},189,428,GETDATE(),
                (select maker from Pu_PurchaseRequisition where code = #{code}),
                GETDATE(),
@@ -287,11 +287,11 @@
                (select makerid from Pu_PurchaseRequisition where code = #{code}),
                (select auditorid from Pu_PurchaseRequisition where code = #{code}),
                GETDATE(),
-               (select idclerk from Pu_PurchaseRequisition where code = #{code}),
-               (select idcustomer from Pu_PurchaseRequisition where code = #{code}),
+               (select idrequisitionperson from Pu_PurchaseRequisition where code = #{code}),
+               (select idsuggpartner from Pu_PurchaseRequisition where code = #{code}),
                (select iddepartment from Pu_PurchaseRequisition where code = #{code}),
                4,GETDATE(),
-               #{code},1,1,GETDATE(),#{code}
+               #{code},1,GETDATE(),#{code},0
               )
     </insert>
 
@@ -299,7 +299,7 @@
         insert into CS_OtherReceiveVoucher(code,idbusinesstype,exchangeRate,OrigAmountSum,
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
-                                           HasRecordCredit,AuditedTime,priuserdefnvc2)
+                                           HasRecordCredit,AuditedTime,priuserdefnvc2,PrintCount)
         values(#{qtyscode},72,1,#{djje},#{djje},189,428,GETDATE(),
                (select maker from SA_SaleOrder where code = #{code}),
                GETDATE(),
@@ -311,7 +311,7 @@
                (select idcustomer from SA_SaleOrder where code = #{code}),
                (select iddepartment from SA_SaleOrder where code = #{code}),
                4,GETDATE(),
-               #{code},1,1,GETDATE(),#{code}
+               #{code},1,1,GETDATE(),#{code},0
               )
     </insert>
 
@@ -319,7 +319,7 @@
         insert into CS_OtherPaymentVoucher(code,idbusinesstype,exchangeRate,OrigAmountSum,
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
-                                           HasRecordCredit,AuditedTime,priuserdefnvc2)
+                                           AuditedTime,priuserdefnvc2,PrintCount)
         values(#{qtyscode},69,1,#{djje},#{djje},189,428,GETDATE(),
                (select maker from PU_PurchaseOrder where code = #{code}),
                GETDATE(),
@@ -328,10 +328,10 @@
                (select auditorid from PU_PurchaseOrder where code = #{code}),
                GETDATE(),
                (select idclerk from PU_PurchaseOrder where code = #{code}),
-               (select idcustomer from PU_PurchaseOrder where code = #{code}),
+               (select idpartner from PU_PurchaseOrder where code = #{code}),
                (select iddepartment from PU_PurchaseOrder where code = #{code}),
                4,GETDATE(),
-               #{code},1,1,GETDATE(),#{code}
+               #{code},1,GETDATE(),#{code},0
               )
     </insert>
 
@@ -369,11 +369,28 @@
                ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
                ISNULL(sum(t0.quantity),0) as sact,
                ISNULL(sum(t3.quantity),0) as bjct,
-               ISNULL(max(t2.pubuserdefdecm1),0) as bjdjje
+               ISNULL(max(t2.pubuserdefdecm1),0) as bjdjje,
+               ISNULL(max(t1.changerid),'') AS bgr
         from SA_SaleOrder_b t0, SA_SaleOrder t1
         left join SA_SaleQuotation t2 on t1.SourceVoucherCode = t2.code
         left join SA_SaleQuotation_b t3 on t3.idSaleQuotationDTO = t2.id
         where t1.code = #{code} and t0.idSaleOrderDTO = t1.id
+        group by t1.code
+    </select>
+
+    <select id="getPuorderDetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
+        select max(t1.SourceVoucherCode) as SourceVoucherCode ,
+               max(t1.idsourcevouchertype) as idsourcevouchertype ,
+               ISNULL(max(t1.priuserdefnvc5),'') as yn ,
+               ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
+               ISNULL(sum(t0.quantity),0) as sact,
+               ISNULL(sum(t3.quantity),0) as bjct,
+               ISNULL(max(t2.pubuserdefdecm1),0) as bjdjje,
+               ISNULL(max(t1.changerid),'') AS bgr
+        from PU_PurchaseOrder_b t0, PU_PurchaseOrder t1
+        left join Pu_PurchaseRequisition t2 on t1.SourceVoucherCode = t2.code
+        left join Pu_PurchaseRequisition_b t3 on t3.idPurchaseRequisitionDTO = t2.id
+        where t1.code = #{code} and t0.idPurchaseOrderDTO = t1.id
         group by t1.code
     </select>
 
@@ -428,4 +445,16 @@
     <delete id="deleteYSWLByQTYSCode" parameterType="java.lang.String">
         delete from ARAP_Detail where voucherCode in (select code from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code})
     </delete>
+
+    <select id="getPuNumbersByCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select CAST(ISNULL(sum(quantity),0) AS nvarchar) as quantity
+        from PU_PurchaseArrival_b
+        where idPurchaseArrivalDTO in (select id from PU_PurchaseArrival where code = #{code})
+    </select>
+
+    <select id="getSaNumbersByCode" parameterType="java.lang.String" resultType="java.lang.String">
+        select CAST(ISNULL(sum(quantity),0) AS nvarchar) as quantity
+        from SA_SaleDelivery_b
+        where idSaleDeliveryDTO in (select id from SA_SaleDelivery where code = #{code})
+    </select>
 </mapper>

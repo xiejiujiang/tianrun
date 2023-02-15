@@ -98,6 +98,8 @@ public interface orderMapper {
 
     Map<String,Object> getSaorderDetailByCode(String code);
 
+    Map<String,Object> getPuorderDetailByCode(String code);
+
     String getQTSYcanuseByCode(String xsddcode);
 
     String getQTYFcanuseByCode(String code);
@@ -115,4 +117,8 @@ public interface orderMapper {
     Map<String,Object> getSadetailByCode(String code);
 
     Map<String,Object> getPudetailByCode(String code);
+
+    String getPuNumbersByCode(String code);
+
+    String getSaNumbersByCode(String code);
 }

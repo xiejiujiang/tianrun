@@ -98,8 +98,9 @@ public class TokenController {
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 // 1 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
                 orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
+
                 //销售订单的定金 也是 在这里 处理了！！！
-                // 2. 因为：销售订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
+                //因为：销售订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
                 //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单数量/报价单数量）
                 //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
                 basicService.dealQTYSBySaOrderCode(vourcherCode);
@@ -119,7 +120,7 @@ public class TokenController {
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 //采购订单的定金 也是 在这里 处理了！！！
-                // 2. 因为：采购订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
+                // 因为：采购订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
                 // 如果有来源单号（请购单单号）：先用请购单号 生成 其他应付（红字），金额是：请购单上的定金金额*（采购订单数量/请购单数量）
                 // 再生成 一个 其他应付单（蓝字），金额是：采购订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应付的蓝字（合同定金 ）
                 basicService.dealQTYFBySaOrderCode(vourcherCode);
@@ -187,6 +188,7 @@ public class TokenController {
     }
 
 
+    // 前端 已 废弃！！！！！！！！！
     // 2023-02-09 这个方法要放弃，放到 消息订阅的 销货单 审核里面。 保存 前 页面提示没有意义了，我可以直接点审核 绕开保存！
     // 销货单 保存后 的时候
     // 1. 判断 导入油厂和选单油厂是否一致（前端已完成）
@@ -237,6 +239,47 @@ public class TokenController {
         synchronized (this){
             String saresult = basicService.auqtyfByCode(code,djje,yn,type);
             return saresult;
+        }
+    }
+
+
+    //采购入库单 保存之前，判断 总数量 和  来源单据的总数量的 差异 是不是在 +- 1之内。否则 前端提示 要走审批
+    @RequestMapping(value="/getNumbersBycgrk", method = {RequestMethod.GET,RequestMethod.POST})
+    public @ResponseBody String getNumbersBycgrk(HttpServletRequest request, HttpServletResponse response) throws Exception{
+        String lydh = request.getParameter("lydh");//来源单号（进货单）
+        String numbers = request.getParameter("numbers");//当前单据总数量
+        String lydhNumbers = orderMapper.getPuNumbersByCode(lydh);
+        Map<String,Object> result = new HashMap<String,Object>();
+        if( Float.valueOf(numbers) >= (Float.valueOf(lydhNumbers)-1)  &&  Float.valueOf(numbers) <= (Float.valueOf(lydhNumbers)+1)){
+            result.put("code","0000");
+            result.put("msg","可以保存！");
+            JSONObject job = new JSONObject(result);
+            return job.toJSONString();
+        }else{
+            result.put("code","9999");
+            result.put("msg","数量超过来源单据的正负1之外！请在备注中添加”超量“关键字的说明后，再保存，进入待审状态！");
+            JSONObject job = new JSONObject(result);
+            return job.toJSONString();
+        }
+    }
+
+    //销售出库单 保存之前，判断 总数量 和  来源单据的总数量的 差异 是不是在 +- 1之内。否则 前端提示 要走审批
+    @RequestMapping(value="/getNumbersByxsck", method = {RequestMethod.GET,RequestMethod.POST})
+    public @ResponseBody String getNumbersByxsck(HttpServletRequest request, HttpServletResponse response) throws Exception{
+        String lydh = request.getParameter("lydh");//来源单号（销货单）
+        String numbers = request.getParameter("numbers");//当前单据总数量
+        String lydhNumbers = orderMapper.getSaNumbersByCode(lydh);
+        Map<String,Object> result = new HashMap<String,Object>();
+        if(Float.valueOf(numbers) >= (Float.valueOf(lydhNumbers)-1)  &&  Float.valueOf(numbers) <= (Float.valueOf(lydhNumbers)+1)){
+            result.put("code","0000");
+            result.put("msg","可以保存！");
+            JSONObject job = new JSONObject(result);
+            return job.toJSONString();
+        }else{
+            result.put("code","9999");
+            result.put("msg","数量超过来源单据的正负1之外！请在备注中添加”超量“关键字的说明后，再保存，进入待审状态！");
+            JSONObject job = new JSONObject(result);
+            return job.toJSONString();
         }
     }
 }
