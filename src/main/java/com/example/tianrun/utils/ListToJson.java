@@ -42,7 +42,7 @@ public class ListToJson {
 
             //进货单表头上的 采购订单号  PurchaseOrderCode
             Map<String,Object> PurchaseOrder = new HashMap<String,Object>();
-            PurchaseOrder.put("Code",retailTianrun.getContractcode());//采购订单号(合同号)
+            PurchaseOrder.put("Code",retailTianrun.getContractcode().trim());//采购订单号(合同号)
             sa.put("PurchaseOrder",PurchaseOrder);
 
             sa.put("Memo",retailTianrun.getGetdesc());//备注
@@ -142,7 +142,7 @@ public class ListToJson {
             Customer.put("Code",retailTianrun.getTcustmorcode());//客户编码
             sa.put("Customer",Customer);
             Map<String,Object> SettleCustomer = new HashMap<String,Object>();
-            SettleCustomer.put("Code",retailTianrun.getTcustmorcode());//结算客户编码（一般等同于 客户编码）
+            SettleCustomer.put("Code",retailTianrun.getSettleCustomer());//结算客户编码
             sa.put("SettleCustomer",SettleCustomer);
             Map<String,Object> BusinessType = new HashMap<String,Object>();
             BusinessType.put("Code","15");//业务类型编码，15–普通销售；16–销售退货
@@ -207,13 +207,9 @@ public class ListToJson {
     }
 
     public static void main(String[] args) throws Exception{
-        if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse("2023-01-31"),
-                new SimpleDateFormat("yyyyMMdd").parse("2023-01-01 00:00:00"),
-                new SimpleDateFormat("yyyyMMdd").parse("2023-01-31 00:00:00"))
-                ){
-            System.out.println("11111111111111111");
-        }else{
-            System.out.println("2222222222222222222");
+        String reddjje =  ""+(-1f * ( Float.valueOf("1231312") * (Float.valueOf(200)/Float.valueOf(200))));
+        if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
+             System.out.println("1111111111111111111111111");
         }
     }
 }

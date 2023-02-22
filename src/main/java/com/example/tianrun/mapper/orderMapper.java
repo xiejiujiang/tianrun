@@ -32,7 +32,7 @@ public interface orderMapper {
 
     String getTpartencodeByByConCode(String pucode);//根据 excel 采购合同号查询对应的供应商编号
 
-    String getTCustmorcodeByByJX(String custmorjx);//根据 客户简写 返回 客户编码（T+有简写）
+    Map<String,Object> getTCustmorcodeByByJX(String custmorjx);//根据 客户简写 返回 客户编码（T+有简写）  和 对应结算客户的code
 
     Map<String,Object> getTinventorycodeByJX(String name,String productInfo,String xm);//根据 存货名称 返回 存货编码
 
@@ -82,15 +82,19 @@ public interface orderMapper {
 
     void addQTYSBySAStr(String qtyscode,String code,String djje);//通过 销售订单 生成
 
+    void addREDQTYSBySAStr(String qtyscode,String code,String djje);//通过 销售订单 生成
+
     void addQTYFByPUStr(String qtyscode,String code,String djje);//通过 采购订单 生成
+
+    void addREDQTYFByPUStr(String qtyscode,String code,String djje);//通过 采购订单 生成
 
     Integer getMaxidByQTYS();
 
     Integer getMaxidByQTYF();
 
-    void addQTYSdetailByStr(String id,String djje);
+    void addQTYSdetailByStr(String id,String djje,String descc);
 
-    void addQTYFdetailByStr(String id,String djje);
+    void addQTYFdetailByStr(String id,String djje,String descc);
 
     void deleteQTYSdetail(String code);
 
@@ -121,4 +125,40 @@ public interface orderMapper {
     String getPuNumbersByCode(String code);
 
     String getSaNumbersByCode(String code);
+
+    Integer getRecordQTYSByCode(String code);
+
+    Integer getRecordQTYSByDDCode(String code);
+
+    Integer getRecordQTYFByCode(String code);
+
+    Integer getRecordQTYFByDDCode(String code);
+
+    void updateQTYSdetailByStr(String code,String djje);
+
+    void updateRedQTYSdetailByStr(String code,String djje);
+
+    void updateYSWLByQTYSCode(String code,String djje);
+
+    void updateRedYSWLByQTYSCode(String code,String djje);
+
+    void updateQTYFdetailByStr(String code,String djje);
+
+    void updateRedQTYFdetailByStr(String code,String djje);
+
+    void updateYSWLByQTYFCode(String code,String djje);
+
+    void updateRedYSWLByQTYFCode(String code,String djje);
+
+    void updatePuCreatorAndCleakByID(String id);
+
+    void updateSaCreatorAndClerkByCode(String code);
+
+    void updatePurchaseRequisitionCX(String code);
+
+    void updateSaleQuotationCX(String code);
+
+    void updateSaorderCX(String xsddcode);
+
+    void updatePuorderCX(String cgddcode);
 }

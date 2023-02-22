@@ -61,7 +61,7 @@ public class TokenController {
             String destr = AESUtils.aesDecrypt(encryptMsg,"123456789012345x");
             // {"id":"AC1C04B100013301500B4A9B012DB2EC","appKey":"A9A9WH1i","appId":"58","msgType":"SaleDelivery_Audit","time":"1649994072443","bizContent":{"externalCode":"","voucherID":"23","voucherDate":"2022/4/15 0:00:00","voucherCode":"SA-2022-04-0011"},"orgId":"90015999132","requestId":"86231b63-f0c2-4de1-86e9-70557ba9cd62"}
             JSONObject job = JSONObject.parseObject(destr);
-            LOGGER.info("------------------- 正式消息接收地址，包含 ticket，消息订阅，授权,具体是："+job.getString("msgType")+" -------------------");
+            LOGGER.info("------------------- 正式消息接收地址，包含 ticket，消息订阅，具体是："+job.getString("msgType")+" -------------------");
             // 采购入库单审核 订阅
             if("PurchaseReceiveVoucher_Audit".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
@@ -90,23 +90,19 @@ public class TokenController {
                 //orderMapper.updateSAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
             }
 
-            // 销售订单（合同）变更——》更新 后，保存, 点价后，更新后续单据的 商品 单价哦
-            // 注意！  这个地方 可能有BUG， 因为 销售订单 到 销货单，可能不只是这两个表 这么简单！
+            // 销售订单（合同）变更——》更新 后，保存, 处理定金（其他应收单）
             if("SaleOrder_Change".equals(job.getString("msgType"))
                 || "SaleOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 // 1 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
-                orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
+                // (暂定价出货的问题 不这样处理了，我还没用想好怎么处理，所以就先取消这个！)
+                // orderMapper.updateSaDetailBySaOrderCode(vourcherCode);
 
-                //销售订单的定金 也是 在这里 处理了！！！
                 //因为：销售订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
                 //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单数量/报价单数量）
                 //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
                 basicService.dealQTYSBySaOrderCode(vourcherCode);
-
-                //3 根据 这个 code -》priuserdefnvc2  删除 对于的 其他应收单( 放到上面这个 serviceimpl 里面去做了)
-                //basicService.deleteQTYSByCode(vourcherCode);
             }
 
             // ------------------------------------------------------------------------------------------//
@@ -123,7 +119,7 @@ public class TokenController {
                 // 因为：采购订单的定金 也是 审核不生产，变更——》保存才生成！（必须是 某人，且，必须是 是！ ）
                 // 如果有来源单号（请购单单号）：先用请购单号 生成 其他应付（红字），金额是：请购单上的定金金额*（采购订单数量/请购单数量）
                 // 再生成 一个 其他应付单（蓝字），金额是：采购订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应付的蓝字（合同定金 ）
-                basicService.dealQTYFBySaOrderCode(vourcherCode);
+                basicService.dealQTYFByPuOrderCode(vourcherCode);
             }
 
             //销货单审核，用来处理 使用定金的问题，并且 无需返回前端，默认（大于订单数量-5就自动使用定金）
@@ -139,7 +135,6 @@ public class TokenController {
                 String code = jrb.getBizContent().getVoucherCode();//进货单 单号
                 basicService.getResultByPUParams(code);
             }
-
 
             // 用来处理复制行的问题
             // 销货单保存（修改） 这个只是用来处理，销货单选单后，客户不想复制明细的个别字段内容，所以通过SQL复制一下
@@ -172,6 +167,8 @@ public class TokenController {
     @RequestMapping(value="/autoexcelinfo", method = {RequestMethod.GET,RequestMethod.POST})
     public @ResponseBody String autoexcelinfo(@RequestParam(value = "file") MultipartFile file, HttpServletRequest request, HttpServletResponse response) {
         try{
+            String user = request.getParameter("user");
+            LOGGER.info(" user ================== " + user);
             InputStream inputStream = file.getInputStream();
             ExcelListener listener = new ExcelListener();
             ExcelReader excelReader = new ExcelReader(inputStream, ExcelTypeEnum.XLS, null, listener);

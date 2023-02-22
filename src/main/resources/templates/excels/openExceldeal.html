@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.bootcss.com/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
 <head>
   <meta charset="UTF-8">
   <title>同步A账订单管理</title>
@@ -140,17 +141,23 @@
     }
   });
 
+  var isclick = true;
   $("#startDiv").click(function (){
+    //var ztuser = $.cookie('AIPortal_Res_Account');//账套_用户ID
+    //alert('zztuser === ' + ztuser);
+    //var zt = ztuser.substring(0,ztuser.indexOf('_'));
+    //var user = ztuser.substring(ztuser.indexOf('_')+1,ztuser.length);
     var filename = $("#ptttext").text();
     if(filename == '' || filename == null){
       alert('请上传一个excel文件后再开始同步！');
       return;
     }else{
-      if(filename.indexOf('xls') > -1 || filename.indexOf('xlsx') > -1){
+      if(isclick && (filename.indexOf('xls') > -1 || filename.indexOf('xlsx') > -1)){
+        isclick = false;
         //提交form表单
         var formData = new FormData($( "#uploadfile")[0]);
         $.ajax({
-          url: 'http://47.92.249.206:9991/tianrun/token/autoexcelinfo' ,
+          url: 'http://47.92.249.206:9991/tianrun/token/autoexcelinfo?user='+9988 ,
           type: 'POST',
           data: formData,
           async: false,

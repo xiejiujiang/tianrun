@@ -18,8 +18,5 @@ public interface BasicService {
 
     void dealQTYSBySaOrderCode(String code);
 
-    void dealQTYFBySaOrderCode(String code);
-
-    void deleteQTYSByCode(String code);
-
+    void dealQTYFByPuOrderCode(String code);
 }

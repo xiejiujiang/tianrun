@@ -97,6 +97,9 @@ public class RetailTianrun extends BaseRowModel {
     @ExcelProperty(index = 29) //来源单据编号
     private String sourceVoucherCode;
 
+    @ExcelProperty(index = 30) //结算客户编码
+    private String settleCustomer;
+
     public String getPlannedpickingdate() {
         return plannedpickingdate;
     }
@@ -337,6 +340,14 @@ public class RetailTianrun extends BaseRowModel {
         this.sourceVoucherCode = sourceVoucherCode;
     }
 
+    public String getSettleCustomer() {
+        return settleCustomer;
+    }
+
+    public void setSettleCustomer(String settleCustomer) {
+        this.settleCustomer = settleCustomer;
+    }
+
     @Override
     public String toString() {
         return "RetailTianrun{" +
@@ -370,6 +381,7 @@ public class RetailTianrun extends BaseRowModel {
                 ", sacode='" + sacode + '\'' +
                 ", projectCode='" + projectCode + '\'' +
                 ", sourceVoucherCode='" + sourceVoucherCode + '\'' +
+                ", settleCustomer='" + settleCustomer + '\'' +
                 '}';
     }
 }
