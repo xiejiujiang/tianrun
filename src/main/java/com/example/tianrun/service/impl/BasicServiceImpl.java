@@ -77,21 +77,6 @@ public class BasicServiceImpl implements BasicService {
                 sadatalist.get(firsthang).setPlansalenumbers(""+Float.valueOf(totalnumber));
             }
 
-            //-------------------------------------------------------------------------------------------------------------------------//
-            for(int i = 0; i < sadatalist.size(); i ++ ){
-                RetailTianrun retailTianrun = sadatalist.get(i);
-                String createorderflag = retailTianrun.getCreateorderflag();//2  生成 销货单进货单  , 0  只生成进货单  ,1  只生成销货单
-                LOGGER.info("sasasa retailTianrun 第 " + i + " 行，对应的生单标志 createorderflag == " + createorderflag);
-                LOGGER.info("sasasa retailTianrun 第 " + i + " 行，对应的 Plansalenumbers  == " + retailTianrun.getPlansalenumbers());
-            }
-            for(int i = 0; i < datalist.size(); i ++ ){
-                RetailTianrun retailTianrun = datalist.get(i);
-                String createorderflag = retailTianrun.getCreateorderflag();//2  生成 销货单进货单  , 0  只生成进货单  ,1  只生成销货单
-                LOGGER.info("pupupu retailTianrun 第 " + i + " 行，对应的生单标志 createorderflag == " + createorderflag);
-                LOGGER.info("pupupu retailTianrun 第 " + i + " 行，对应的 Plansalenumbers  == " + retailTianrun.getPlansalenumbers());
-            }
-            //-------------------------------------------------------------------------------------------------------------------------//
-
             // 业务处理逻辑
             if(datalist != null && datalist.size() != 0){
                 //同时 处理了  进货list  和   销货List
@@ -101,7 +86,6 @@ public class BasicServiceImpl implements BasicService {
                     RetailTianrun retailTianrun = datalist.get(i);
 
                     String createorderflag = retailTianrun.getCreateorderflag();//2  生成 销货单进货单  , 0  只生成进货单  ,1  只生成销货单
-                    LOGGER.info("2222222222 进货list 第 " + i + " 行，对应的生单标志 createorderflag == " + createorderflag);
 
                     retailTianrun.setTpartencode(orderMapper.getTpartencodeByByConCode(retailTianrun.getContractcode()));//根据采购合同号查询对应的供应商编号
                     String sataxprice = sadatalist.get(i).getTaxprice();
@@ -141,11 +125,11 @@ public class BasicServiceImpl implements BasicService {
 
                     //进货明细 的 来源单据单据对应的明细行ID  以及  订单上 这一行的 蛋白差！
                     Map<String,Object> pusourceVoucherDetailMap = orderMapper.getPUSourceVoucherDetailId(retailTianrun.getContractcode(),tinventorycode.get("code").toString());
-                    if(pusourceVoucherDetailMap!=null){
+                    if(pusourceVoucherDetailMap != null){
                         //retailTianrun.setSourceVoucherCode("xxxxxxxx");//如果找不到，就用 contractcode 本身
                         retailTianrun.setPusourceVoucherDetailId(pusourceVoucherDetailMap.get("id").toString());
                         retailTianrun.setDanbaicha(pusourceVoucherDetailMap.get("danbaicha").toString());
-                        if(pusourceVoucherDetailMap.get("taxPrice") != null && !"".equals(pusourceVoucherDetailMap.get("taxPrice").toString())){
+                        /*if(pusourceVoucherDetailMap.get("taxPrice") != null && !"".equals(pusourceVoucherDetailMap.get("taxPrice").toString())){
                             retailTianrun.setTaxprice(pusourceVoucherDetailMap.get("taxPrice").toString());//就用订单上的含税单价
                         }else{
                             //如果导入的不为空 就 用 导入的。否则就是0
@@ -153,7 +137,7 @@ public class BasicServiceImpl implements BasicService {
                                 retailTianrun.setTaxprice("0");//就用订单上的含税单价
                                 sadatalist.get(i).setTaxprice("0");
                             }
-                        }
+                        }*/
                     }
                     //还要去 取 每一个商品的税率 和 单位
                     retailTianrun.setUnitname(tinventorycode.get("unitname").toString());

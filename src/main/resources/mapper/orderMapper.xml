@@ -46,8 +46,8 @@
 
     <select id="getTpartencodeByByConCode" parameterType="java.lang.String" resultType="java.lang.String">
         select top 1 t2.code from
-        PU_PurchaseOrder t1,AA_PartnerEntity t2
-        where t1.code = #{pucode} and t1.idpartner = t2.id
+        PU_PurchaseOrder t1,PU_PurchaseOrder_b t0,AA_PartnerEntity t2
+        where  t1.id = t0.idPurchaseOrderDTO and  t0.pubuserdefnvc3 = #{pucode}  and t1.idpartner = t2.id
     </select>
 
     <select id="getTCustmorcodeByByJX" parameterType="java.lang.String" resultType="java.util.Map">
@@ -106,7 +106,7 @@
             t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,ST_RDRecord t3,ST_RDRecord_b t4
         where t1.idPurchaseArrivalDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
-          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode}
+          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
     </update>
 
     <update id="updateSAdetailBySTCode" parameterType="java.lang.String">
@@ -119,7 +119,7 @@
             t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,ST_RDRecord t3,ST_RDRecord_b t4
         where t1.idSaleDeliveryDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
-          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode}
+          and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
     </update>
 
     <update id="updateARAPDetailByPUBusinessCode" parameterType="java.lang.String">
