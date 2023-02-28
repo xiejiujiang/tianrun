@@ -126,29 +126,33 @@ public interface orderMapper {
 
     String getSaNumbersByCode(String code);
 
-    Integer getRecordQTYSByCode(String code);
+    Integer getRecordQTYSByCode(String bjcode,String code);
+
+    Integer getBJQTYSByCode(String code);
+
+    Integer getQGQTYFByCode(String code);
 
     Integer getRecordQTYSByDDCode(String code);
 
-    Integer getRecordQTYFByCode(String code);
+    Integer getRecordQTYFByCode(String qgcode,String code);
 
     Integer getRecordQTYFByDDCode(String code);
 
     void updateQTYSdetailByStr(String code,String djje);
 
-    void updateRedQTYSdetailByStr(String code,String djje);
+    void updateRedQTYSdetailByStr(String bjcode,String code,String djje);
 
     void updateYSWLByQTYSCode(String code,String djje);
 
-    void updateRedYSWLByQTYSCode(String code,String djje);
+    void updateRedYSWLByQTYSCode(String bjcode,String code,String djje);
 
     void updateQTYFdetailByStr(String code,String djje);
 
-    void updateRedQTYFdetailByStr(String code,String djje);
+    void updateRedQTYFdetailByStr(String qgcode,String code,String djje);
 
     void updateYSWLByQTYFCode(String code,String djje);
 
-    void updateRedYSWLByQTYFCode(String code,String djje);
+    void updateRedYSWLByQTYFCode(String qgcode,String code,String djje);
 
     void updatePuCreatorAndCleakByID(String id);
 
@@ -161,4 +165,8 @@ public interface orderMapper {
     void updateSaorderCX(String xsddcode);
 
     void updatePuorderCX(String cgddcode);
+
+    void updateSaleDeliverySourceRelation(String code);
+
+    void updatePurchaseArrivalSourceRelation(String code);
 }

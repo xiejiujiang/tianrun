@@ -69,6 +69,8 @@ public class TokenController {
                 LOGGER.info("-------------------采购入库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
                 //查询下 这个 入库单上的 商品 和 对应的 数量，金额。以及 对应的 进货单是哪个，然后再更新进货单上面的内容
                 orderMapper.updatePUdetailBySTCode(vourcherCode);
+                //更新下进货单对应的 PU_PurchaseArrival_SourceRelation
+                orderMapper.updatePurchaseArrivalSourceRelation(vourcherCode);
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailByPUBusinessCode(vourcherCode);
             }
@@ -80,6 +82,8 @@ public class TokenController {
                 LOGGER.info("-------------------销售出库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
                 // 审核之后 把 实际 数量 反写回 销货单的 数量上， 并自动计算 差异 ，写入 数量差异字段（都是是自定义字段）
                 orderMapper.updateSAdetailBySTCode(vourcherCode);//还要更新下 差异字段哦
+                //更新下对应的销货单上游 SA_SaleDeliverySourceRelation 里面的数量
+                orderMapper.updateSaleDeliverySourceRelation(vourcherCode);
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailBySABusinessCode(vourcherCode);
 

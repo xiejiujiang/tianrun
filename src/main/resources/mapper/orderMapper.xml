@@ -109,6 +109,20 @@
           and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
     </update>
 
+    <update id="updateSaleDeliverySourceRelation" parameterType="java.lang.String">
+        update  t1
+            set t1.quantity=t2.quantity, t1.baseQuantity=t2.quantity
+        from SA_SaleDeliverySourceRelation t1,ST_RDRecord_b t2,ST_RDRecord t3
+        where t1.idSaleDeliveryDetailDTO = t2.sourceVoucherDetailId and t2.idRDRecordDTO = t3.id and t3.code = #{code}
+    </update>
+
+    <update id="updatePurchaseArrivalSourceRelation" parameterType="java.lang.String">
+        update  t1
+        set t1.quantity=t2.quantity, t1.baseQuantity=t2.quantity
+            from PU_PurchaseArrival_SourceRelation  t1,ST_RDRecord_b t2,ST_RDRecord t3
+        where t1.idPurchaseArrivalDetailDTO = t2.sourceVoucherDetailId and t2.idRDRecordDTO = t3.id and t3.code = #{code}
+    </update>
+
     <update id="updateSAdetailBySTCode" parameterType="java.lang.String">
         update  t1
         set t1.priuserdefdecm1 = (t1.quantity - t4.quantity),
@@ -277,7 +291,14 @@
     </insert>
 
     <select id="getRecordQTYSByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
-        select ISNULL(count(id),0) as ct from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code} and OrigAmountSum <![CDATA[ < ]]> 0
+        select ISNULL(count(id),0) as ct from CS_OtherReceiveVoucher
+        where priuserdefnvc1 = #{bjcode} and priuserdefnvc2 = #{code}
+        and OrigAmountSum <![CDATA[ < ]]> 0
+    </select>
+
+    <select id="getBJQTYSByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select ISNULL(count(id),0) as ct from CS_OtherReceiveVoucher
+        where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code} and OrigAmountSum > 0
     </select>
 
     <select id="getRecordQTYSByDDCode" parameterType="java.lang.String" resultType="java.lang.Integer">
@@ -285,7 +306,14 @@
     </select>
 
     <select id="getRecordQTYFByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
-        select ISNULL(count(id),0) as ct from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code} and OrigAmountSum <![CDATA[ < ]]> 0
+        select ISNULL(count(id),0) as ct from CS_OtherPaymentVoucher
+        where priuserdefnvc1 = #{qgcode} and priuserdefnvc2 = #{code}
+        and OrigAmountSum <![CDATA[ < ]]> 0
+    </select>
+
+    <select id="getQGQTYFByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
+        select ISNULL(count(id),0) as ct from CS_OtherPaymentVoucher
+        where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code} > 0
     </select>
 
     <select id="getRecordQTYFByDDCode" parameterType="java.lang.String" resultType="java.lang.Integer">
@@ -295,56 +323,60 @@
     <update id="updateQTYSdetailByStr" parameterType="java.lang.String">
         update CS_OtherReceiveVoucher_b
         set origamount = #{djje},amount = #{djje}
-        where idotherReceiveVoucherDTO = (select top 1 id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code})
+        where idotherReceiveVoucherDTO = (select top 1 id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origamount > 0
     </update>
 
     <update id="updateRedQTYSdetailByStr" parameterType="java.lang.String">
         update CS_OtherReceiveVoucher_b
         set origamount = #{djje},amount = #{djje}
-        where idotherReceiveVoucherDTO = (select top 1 id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code})
+        where idotherReceiveVoucherDTO = (
+                                            select top 1 id
+                                            from CS_OtherReceiveVoucher
+                                            where priuserdefnvc1 = #{bjcode} and priuserdefnvc2 = #{code}
+                                         )
         and origamount <![CDATA[ < ]]> 0
     </update>
 
     <update id="updateYSWLByQTYSCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount = #{djje},amount = #{djje}
-        where businessCode = (select top 1 code from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code})
+        where businessCode = (select top 1 code from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origAmount > 0
     </update>
 
     <update id="updateRedYSWLByQTYSCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount = #{djje},amount = #{djje}
-        where businessCode = (select top 1 code from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code} )
+        where businessCode = (select top 1 code from CS_OtherReceiveVoucher where priuserdefnvc1 = #{bjcode} and priuserdefnvc2 = #{code} )
         and origAmount  <![CDATA[ < ]]> 0
     </update>
 
     <update id="updateQTYFdetailByStr" parameterType="java.lang.String">
         update CS_OtherPaymentVoucher_b
         set origamount = #{djje},amount = #{djje}
-        where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code})
+        where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origamount > 0
     </update>
 
     <update id="updateRedQTYFdetailByStr" parameterType="java.lang.String">
         update CS_OtherPaymentVoucher_b
         set origamount = #{djje},amount = #{djje}
-        where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code})
+        where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{qgcode} and priuserdefnvc2 = #{code} )
           and origamount <![CDATA[ < ]]> 0
     </update>
 
     <update id="updateYSWLByQTYFCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount = #{djje},amount = #{djje}
-        where businessCode = (select top 1 code from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code})
+        where businessCode = (select top 1 code from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origAmount > 0
     </update>
 
     <update id="updateRedYSWLByQTYFCode" parameterType="java.lang.String">
         update ARAP_Detail
         set origAmount = #{djje},amount = #{djje}
-        where businessCode = (select top 1 code from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code})
+        where businessCode = (select top 1 code from CS_OtherPaymentVoucher where priuserdefnvc1 = #{qgcode} and priuserdefnvc2 = #{code})
           and origAmount <![CDATA[ < ]]> 0
     </update>
 
@@ -480,35 +512,57 @@
     </delete>
 
     <select id="getSaorderDetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select max(t1.SourceVoucherCode) as SourceVoucherCode ,
-               max(t1.idsourcevouchertype) as idsourcevouchertype ,
-               ISNULL(max(t1.priuserdefnvc3),'') as yn ,
-               ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
-               ISNULL(sum(t0.quantity),0) as sact,
-               ISNULL(sum(t3.quantity),0) as bjct,
-               ISNULL(max(t2.pubuserdefdecm1),0) as bjdjje,
-               ISNULL(max(t1.changer),'') AS bgr
-        from SA_SaleOrder_b t0, SA_SaleOrder t1
-        left join SA_SaleQuotation t2 on t1.SourceVoucherCode = t2.code
-        left join SA_SaleQuotation_b t3 on t3.idSaleQuotationDTO = t2.id
-        where t1.code = #{code} and t0.idSaleOrderDTO = t1.id
-        group by t1.code
+        select
+            ISNULL(max(k1.SourceVoucherCode),'') as SourceVoucherCode,
+            ISNULL(max(k1.idsourcevouchertype),'') as idsourcevouchertype,
+            ISNULL(max(k1.yn),'') as yn ,
+            ISNULL(max(k1.pubuserdefdecm1),0) as pubuserdefdecm1,
+            ISNULL(max(k1.bgr),'') as bgr,
+            ISNULL(max(k1.sact),0) as sact,
+            ISNULL(max(k2.pubuserdefdecm1),0) as bjdjje,
+            sum(k3.quantity) as bjct
+        from(
+                select
+                    max(t1.code) as code,
+                    max(t1.SourceVoucherCode) as SourceVoucherCode ,
+                    max(t1.idsourcevouchertype) as idsourcevouchertype ,
+                    ISNULL(max(t1.priuserdefnvc3),'') as yn ,
+                    ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
+                    ISNULL(max(t1.changer),'') AS bgr,
+                    ISNULL(sum(t0.quantity),0) as sact
+                from SA_SaleOrder_b t0, SA_SaleOrder t1
+                where t0.idSaleOrderDTO = t1.id and t0.IsClose != 1 and t1.code = #{code}
+                group by t1.id
+            )k1 left join SA_SaleQuotation k2 on k1.SourceVoucherCode = k2.code
+                left join SA_SaleQuotation_b k3 on k2.id = k3.idSaleQuotationDTO
+        group by k1.code
     </select>
 
     <select id="getPuorderDetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select max(t1.SourceVoucherCode) as SourceVoucherCode ,
-               max(t1.idsourcevouchertype) as idsourcevouchertype ,
-               ISNULL(max(t1.priuserdefnvc5),'') as yn ,
-               ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
-               ISNULL(sum(t0.quantity),0) as sact,
-               ISNULL(sum(t3.quantity),0) as bjct,
-               ISNULL(max(t2.pubuserdefdecm1),0) as bjdjje,
-               ISNULL(max(t1.changer),'') AS bgr
-        from PU_PurchaseOrder_b t0, PU_PurchaseOrder t1
-        left join Pu_PurchaseRequisition t2 on t1.SourceVoucherCode = t2.code
-        left join Pu_PurchaseRequisition_b t3 on t3.idPurchaseRequisitionDTO = t2.id
-        where t1.code = #{code} and t0.idPurchaseOrderDTO = t1.id
-        group by t1.code
+        select
+            ISNULL(max(k1.SourceVoucherCode),'') as SourceVoucherCode,
+            ISNULL(max(k1.idsourcevouchertype),'') as idsourcevouchertype,
+            ISNULL(max(k1.yn),'') as yn ,
+            ISNULL(max(k1.pubuserdefdecm1),0) as pubuserdefdecm1,
+            ISNULL(max(k1.bgr),'') as bgr,
+            ISNULL(max(k1.sact),0) as sact,
+            ISNULL(max(k2.pubuserdefdecm1),0) as bjdjje,
+            sum(k3.quantity) as bjct
+        from(
+                select
+                    max(t1.code) as code,
+                    max(t1.SourceVoucherCode) as SourceVoucherCode ,
+                    max(t1.idsourcevouchertype) as idsourcevouchertype ,
+                    ISNULL(max(t1.priuserdefnvc3),'') as yn ,
+                    ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
+                    ISNULL(max(t1.changer),'') AS bgr,
+                    ISNULL(sum(t0.quantity),0) as sact
+                from PU_PurchaseOrder_b t0, PU_PurchaseOrder t1
+                where t0.idPurchaseOrderDTO = t1.id and t0.IsClose != 1 and t1.code = #{code}
+                group by t1.id
+            )k1 left join Pu_PurchaseRequisition k2 on k1.SourceVoucherCode = k2.code
+                left join Pu_PurchaseRequisition_b k3 on k2.id = k3.idPurchaseRequisitionDTO
+        group by k1.code
     </select>
 
     <select id="getQTSYcanuseByCode" parameterType="java.lang.String" resultType="java.lang.String">

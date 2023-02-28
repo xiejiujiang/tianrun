@@ -402,7 +402,7 @@ public class BasicServiceImpl implements BasicService {
         if("add".equals(type) && "是".equals(yn) && djje != null && !"".equals(djje)){
             //生成的这个其他应收单的单号
             String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
-            int recordQTRYByCode = orderMapper.getRecordQTYSByCode(code);
+            int recordQTRYByCode = orderMapper.getBJQTYSByCode(code);
             //增加其他应收的定金
             if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0 && recordQTRYByCode == 0){
                 orderMapper.addQTYSByStr(qtsycode,code,djje);
@@ -427,7 +427,7 @@ public class BasicServiceImpl implements BasicService {
         if("add".equals(type) && "是".equals(yn) && djje != null && !"".equals(djje)){
             //生成的这个其他应付单的单号
             String qtyfcode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
-            int recordQTRYByCode = orderMapper.getRecordQTYFByCode(code);
+            int recordQTRYByCode = orderMapper.getQGQTYFByCode(code);
             //增加其他应付的定金
             if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0 && recordQTRYByCode == 0){
                 orderMapper.addQTYFByStr(qtyfcode,code,djje);
@@ -453,9 +453,10 @@ public class BasicServiceImpl implements BasicService {
             //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
             Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
             if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
-                    && "103".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 报价单哦
+                    && "103".equals(params.get("idsourcevouchertype").toString())){
+                //说明 来源单价是 报价单哦
                 String bjcode = params.get("SourceVoucherCode").toString();//报价单单号
-                int ct = orderMapper.getRecordQTYSByCode(bjcode);//系统中 是否已经有对应的其他应收单
+                int ct = orderMapper.getRecordQTYSByCode(bjcode,code);//系统中 是否已经有对应的其他应收单
                 String bjct = params.get("bjct").toString();//报价单总数量
                 String bjdjje = params.get("bjdjje").toString();//报价单总数量
                 String sact = params.get("sact").toString();//销售订单总数量
@@ -494,8 +495,8 @@ public class BasicServiceImpl implements BasicService {
                     //先 更新 其他应收的定金(红字！)
                     String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
                     if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
-                        orderMapper.updateRedQTYSdetailByStr(code,reddjje);
-                        orderMapper.updateRedYSWLByQTYSCode(code,reddjje);
+                        orderMapper.updateRedQTYSdetailByStr(bjcode,code,reddjje);
+                        orderMapper.updateRedYSWLByQTYSCode(bjcode,code,reddjje);
                     }
                     //再 更新 蓝字的其他应收的定金
                     orderMapper.updateQTYSdetailByStr(code,sadjje);
@@ -536,11 +537,10 @@ public class BasicServiceImpl implements BasicService {
         synchronized (this){
             Map<String,Object> params = orderMapper.getPuorderDetailByCode(code);//此处查询 采购的 单据情况
             if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
-                    && "101".equals(params.get("idsourcevouchertype").toString())){//说明 来源单价是 请购单
-                String bjcode = params.get("SourceVoucherCode").toString();//请购单单号
-
-                int ct = orderMapper.getRecordQTYFByCode(bjcode);//系统中 是否已经有对应的其他应付单()
-
+                    && "101".equals(params.get("idsourcevouchertype").toString())){
+                //说明 来源单价是 请购单
+                String qgcode = params.get("SourceVoucherCode").toString();//请购单单号
+                int ct = orderMapper.getRecordQTYFByCode(qgcode,code);//系统中 是否已经有对应的其他应付单()
                 String bjct = params.get("bjct").toString();//请购单总数量
                 String bjdjje = params.get("bjdjje").toString();//请购单总金额
                 String sact = params.get("sact").toString();//采购订单总数量
@@ -556,11 +556,11 @@ public class BasicServiceImpl implements BasicService {
                     if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
                         orderMapper.addREDQTYFByPUStr(redqtsycode,code, reddjje);
                         int redid = Integer.valueOf(orderMapper.getMaxidByQTYF());
-                        orderMapper.addQTYFdetailByStr(redid+"",reddjje,"转回定金："+bjcode);
+                        orderMapper.addQTYFdetailByStr(redid+"",reddjje,"转回定金："+qgcode);
                         //插入 应收应付余额明细表
                         orderMapper.addYSWLByQTYFCode(redqtsycode);
                         // 需要再更新下对应的 请购单上的 已冲销金额
-                        orderMapper.updatePurchaseRequisitionCX(bjcode);
+                        orderMapper.updatePurchaseRequisitionCX(qgcode);
                     }
                     //再生成蓝字的QTYS
                     String qtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
@@ -580,8 +580,8 @@ public class BasicServiceImpl implements BasicService {
                     //先 更新 其他应付的定金(红字！)
                     String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
                     if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
-                        orderMapper.updateRedQTYFdetailByStr(code,reddjje);
-                        orderMapper.updateRedYSWLByQTYFCode(code,reddjje);
+                        orderMapper.updateRedQTYFdetailByStr(qgcode,code,reddjje);
+                        orderMapper.updateRedYSWLByQTYFCode(qgcode,code,reddjje);
                     }
                     //再 更新 蓝字的其他应付的定金
                     orderMapper.updateQTYFdetailByStr(code,sadjje);
