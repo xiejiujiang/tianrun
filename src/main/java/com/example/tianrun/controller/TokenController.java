@@ -73,6 +73,8 @@ public class TokenController {
                 orderMapper.updatePurchaseArrivalSourceRelation(vourcherCode);
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailByPUBusinessCode(vourcherCode);
+                //如果是从订单来的，那么对应订单的 deliveryQuantity   executedQuantity  以及 deliveryQuantity2   executedQuantity2 也需要更新成对应商品的出库单一致
+                orderMapper.updatePuorderBySTInventoryQuanity(vourcherCode);
             }
 
             // 销售出库单审核 订阅
@@ -87,11 +89,9 @@ public class TokenController {
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailBySABusinessCode(vourcherCode);
 
-                // 也需要把  预收款的核销金额 同步 。
-                //先更新 销货单上的 预收金额
-                //orderMapper.updateSASAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
-                //再更新 销货单预收明细里面的核销金额
-                //orderMapper.updateSAPreReceiveAmount(vourcherCode);//根据明细 含税金额的总和 更新 对应销货单的使用预收 以及 核销金额
+                //如果是从订单来的，那么对应订单的 deliveryQuantity   executedQuantity  以及 deliveryQuantity2   executedQuantity2
+                // 也需要更新成对应商品的出库单一致  这个方法可能有特殊情况下的问题：比如 一个订单 多个 销货单 多个 出库单的时候
+                orderMapper.updateSaorderBySTInventoryQuanity(vourcherCode);
             }
 
             // 销售订单（合同）变更——》更新 后，保存, 处理定金（其他应收单）

@@ -118,9 +118,9 @@ public interface orderMapper {
 
     void deleteYSWLByQTYSCode(String qtsycode);
 
-    Map<String,Object> getSadetailByCode(String code);
+    List<Map<String,Object>> getSadetailByCode(String code);
 
-    Map<String,Object> getPudetailByCode(String code);
+    List<Map<String,Object>> getPudetailByCode(String code);
 
     String getPuNumbersByCode(String code);
 
@@ -169,4 +169,8 @@ public interface orderMapper {
     void updateSaleDeliverySourceRelation(String code);
 
     void updatePurchaseArrivalSourceRelation(String code);
+
+    void updateSaorderBySTInventoryQuanity(String code);
+
+    void updatePuorderBySTInventoryQuanity(String code);
 }

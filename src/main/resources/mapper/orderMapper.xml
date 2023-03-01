@@ -58,15 +58,19 @@
     </select>
 
     <select id="getSadetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select SourceVoucherCode as xsddcode,voucherdate as codeday,
-        (select sum(quantity) from SA_SaleDelivery_b where idSaleDeliveryDTO in (select id from SA_SaleDelivery where code = #{code} )) as numbers
-        from SA_SaleDelivery where code = #{code}
+        select t1.sourceVoucherCode as xsddcode,max(t2.voucherdate) as codeday,
+               sum(t1.quantity) as numbers
+        from SA_SaleDelivery_b t1,SA_SaleDelivery t2
+        where t1.idSaleDeliveryDTO = t2.id and t2.code = #{code}
+        group by t1.sourceVoucherCode
     </select>
 
     <select id="getPudetailByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select SourceVoucherCode as cgddcode,voucherdate as codeday,
-               (select sum(quantity) from PU_PurchaseArrival_b where idPurchaseArrivalDTO in (select id from PU_PurchaseArrival where code = #{code} )) as numbers
-        from PU_PurchaseArrival where code = #{code}
+        select t1.sourceVoucherCode as cgddcode,max(t2.voucherdate) as codeday,
+               sum(t1.quantity) as numbers
+        from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2
+        where t1.idPurchaseArrivalDTO = t2.id and t2.code =  #{code}
+        group by t1.sourceVoucherCode
     </select>
 
     <select id="getTinventorycodeByJX" parameterType="java.lang.String" resultType="java.util.Map">
@@ -137,21 +141,19 @@
     </update>
 
     <update id="updateARAPDetailByPUBusinessCode" parameterType="java.lang.String">
-        update ARAP_Detail
-        set origAmount =( SELECT SUM(origTaxAmount) AS origTAXAmount FROM PU_PurchaseArrival_b
-                          WHERE idPurchaseArrivalDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) ),
-            amount= ( SELECT SUM(origTaxAmount) AS origTAXAmount FROM PU_PurchaseArrival_b
-                      WHERE idPurchaseArrivalDTO IN (SELECT ID FROM PU_PurchaseArrival WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) )
-        where businessCode = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})
+        update t1
+        set t1.origAmount = t2.origTaxAmount,t1.amount = t2.origTaxAmount
+        from ARAP_Detail t1,PU_PurchaseArrival_b t2,PU_PurchaseArrival t3,ST_RDRecord t4
+        where t4.code = #{vourcherCode} and t4.sourceVoucherCode = t3.code and t3.id = t2.idPurchaseArrivalDTO
+        and t2.id = t1.voucherDetailID
     </update>
 
     <update id="updateARAPDetailBySABusinessCode" parameterType="java.lang.String">
-        update ARAP_Detail
-        set origAmount =( SELECT SUM(origTaxAmount) AS origTAXAmount FROM SA_SaleDelivery_b
-            WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})) ),
-        amount= ( SELECT SUM(origTaxAmount) AS origTAXAmount FROM SA_SaleDelivery_b
-                  WHERE idSaleDeliveryDTO IN (SELECT ID FROM SA_SaleDelivery WHERE CODE = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode}) ) )
-        where businessCode = (select top 1 sourceVoucherCode from ST_RDRecord where code = #{vourcherCode})
+        update  t1
+        set t1.origAmount = t2.origTaxAmount,t1.amount = t2.origTaxAmount
+        from ARAP_Detail t1,SA_SaleDelivery_b t2,SA_SaleDelivery t3,ST_RDRecord t4
+        where t4.code = #{vourcherCode} and t4.sourceVoucherCode = t3.code and t3.id = t2.idSaleDeliveryDTO
+        and t2.id = t1.voucherDetailID
     </update>
 
     <update id="updateSASAPreReceiveAmount" parameterType="java.lang.String">
@@ -677,5 +679,21 @@
             where idOtherPaymentVoucherDTO in (select id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{cgddcode}) and origamount <![CDATA[ < ]]> 0
         )
         where code = #{cgddcode}
+    </update>
+
+    <update id="updateSaorderBySTInventoryQuanity" parameterType="java.lang.String">
+        update t1
+            set t1.executedQuantity = t4.quantity,t1.executedQuantity2 = t4.quantity,t1.deliveryQuantity = t4.quantity,t1.deliveryQuantity2 = t4.quantity
+        from SA_SaleOrder_b t1,SA_SaleOrder t2,SA_SaleDelivery t3,ST_RDRecord_b t4,ST_RDRecord t5
+        where t5.code = #{code} and t5.id = t4.idRDRecordDTO and t5.sourceVoucherCode = t3.code and t3.sourceVoucherCode = t2.code
+        and t2.id = t1.idSaleOrderDTO and t1.idinventory = t4.idinventory
+    </update>
+
+    <update id="updatePuorderBySTInventoryQuanity">
+        update t1
+        set t1.countQuantity  = t4.quantity,t1.countQuantity2 = t4.quantity,t1.countArrivalQuantity = t4.quantity,t1.countArrivalQuantity2 = t4.quantity
+            from PU_PurchaseOrder_b t1,PU_PurchaseOrder t2,PU_PurchaseArrival t3,ST_RDRecord_b t4,ST_RDRecord t5
+        where t5.code = #{code} and t5.id = t4.idRDRecordDTO and t5.sourceVoucherCode = t3.code and t3.sourceVoucherCode = t2.code
+          and t2.id = t1.idPurchaseOrderDTO  and t1.idinventory = t4.idinventory
     </update>
 </mapper>
