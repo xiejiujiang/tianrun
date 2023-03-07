@@ -257,57 +257,38 @@ public class BasicServiceImpl implements BasicService {
             if(saresultList != null && saresultList.size() !=0){
                 for(Map<String,Object> saresult : saresultList){
                     String xsddcode = saresult.get("xsddcode").toString();//当前的单据 对应的  销售订单单据编号
-                    String codeday = saresult.get("codeday").toString();//当前的 单据日期
-                    String numbers = saresult.get("numbers").toString();//当前单 据的总数量
+                    //String codeday = saresult.get("codeday").toString();//当前的 单据日期
+                    //String numbers = saresult.get("numbers").toString();//当前单 据的总数量
+
                     //查询这个销售订单 后续 所有销货单（保存/审核中/审核）的数量总数，以及 这个 订单对应的 表头上的 开始日期-结束日期  。但是不包含当前销货单哈！
-                    //表头上 这个地方  选单之后 是空白的！！！
-                    Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode,code);
+                    Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode);
                     if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
-                        String totalNumbers = xsddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量
-                        //这个只能 单独 去查一次！
-                        String ddNumbers = orderMapper.getddNumbersByCode(xsddcode); //xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
-                        String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
-                        String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
-                        if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
-                                new SimpleDateFormat("yyyyMMdd").parse(starteDate),
-                                new SimpleDateFormat("yyyyMMdd").parse(enddate))
-                                && (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) <= Float.valueOf(ddNumbers) -5 ){
+                        String totalNumbers = xsddmap.get("totalNumbers").toString();// 这个销售订单后续所有销货单的总数量（包含当前单据的）
+                        String ddNumbers = xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
+                        //String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
+                        //String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
+                        if(  Float.valueOf(totalNumbers) <= (Float.valueOf(ddNumbers) -5)  ){
                             result.put("code","0000");
                             result.put("msg","允许保存");
                             JSONObject job = new JSONObject(result);
                             return job.toJSONString();
                         }else{
-                            if( (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) > Float.valueOf(ddNumbers) -5 ){
-                                //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
-                                String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(xsddcode)));
-                                if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
-                                    String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
-                                    orderMapper.addQTYSBySAStr(qtsycode,xsddcode,reddjje);
-                                    int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
-                                    orderMapper.addQTYSdetailByStr(id+"",reddjje,"转回定金："+xsddcode);
-                                    //插入 应收应付余额明细表
-                                    orderMapper.addYSWLByQTYSCode(qtsycode);
-                                    // 更新 销货单 对应的 销售订单上的 已冲销金额
-                                    orderMapper.updateSaorderCX(xsddcode);
-                                }
-                                result.put("code","8888");
-                                result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
+                            //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
+                            String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(xsddcode)));
+                            if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
+                                String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                                orderMapper.addQTYSBySAStr(qtsycode,xsddcode,reddjje);
+                                int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+                                orderMapper.addQTYSdetailByStr(id+"",reddjje,"转回定金："+xsddcode);
+                                //插入 应收应付余额明细表
+                                orderMapper.addYSWLByQTYSCode(qtsycode);
+                                // 更新 销货单 对应的 销售订单上的 已冲销金额
+                                orderMapper.updateSaorderCX(xsddcode);
                             }
-                            if(!DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
-                                    new SimpleDateFormat("yyyyMMdd").parse(starteDate),
-                                    new SimpleDateFormat("yyyyMMdd").parse(enddate))){
-                                result.put("code","8888");
-                                result.put("msg","超出订单执行时间范围!在备注中填入超时两个字，进入审批流！");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
-                            }else{
-                                result.put("code","9999");
-                                result.put("msg","不允许保存！");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
-                            }
+                            result.put("code","8888");
+                            result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
+                            JSONObject job = new JSONObject(result);
+                            return job.toJSONString();
                         }
                     }else{
                         result.put("code","9999");
@@ -338,55 +319,36 @@ public class BasicServiceImpl implements BasicService {
             if(puresultList != null && puresultList.size() != 0){
                 for(Map<String,Object> puresult : puresultList){
                     String cgddcode = puresult.get("cgddcode").toString();//当前的单据 对应的  采购订单单据编号
-                    String codeday = puresult.get("codeday").toString();//当前的 单据日期
-                    String numbers = puresult.get("numbers").toString();//当前单 据的总数量
-                    Map<String,Object> xsddmap = orderMapper.getCgddmapByCode(cgddcode,code);
-                    if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
-                        String totalNumbers = xsddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量
-                        //这个只能 单独 去查一次！
-                        String ddNumbers = orderMapper.getcgNumbersByCode(cgddcode);
-                        String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
-                        String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
-                        if(DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
-                                new SimpleDateFormat("yyyyMMdd").parse(starteDate),
-                                new SimpleDateFormat("yyyyMMdd").parse(enddate))
-                                && (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) <= Float.valueOf(ddNumbers) -5 ){
+                    //String codeday = puresult.get("codeday").toString();//当前的 单据日期
+                    //String numbers = puresult.get("numbers").toString();//当前单 据的总数量
+                    Map<String,Object> cgddmap = orderMapper.getCgddmapByCode(cgddcode);
+                    if( cgddmap != null  &&  cgddmap.get("startdate") != null ){
+                        String totalNumbers = cgddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量(包含当前单据的)
+                        String ddNumbers = cgddmap.get("ddNumbers").toString();//采购订单总数量
+                        //String starteDate = cgddmap.get("startdate").toString();// 销售订单 表头 的开始时间
+                        //String enddate = cgddmap.get("enddate").toString();//  销售订单 表头 的结束时间
+                        if( Float.valueOf(totalNumbers) <= (Float.valueOf(ddNumbers) -5) ){
                             result.put("code","0000");
                             result.put("msg","允许保存");
                             JSONObject job = new JSONObject(result);
                             return job.toJSONString();
                         }else{
-                            if( (Float.valueOf(numbers) + Float.valueOf(totalNumbers)) > Float.valueOf(ddNumbers) -5 ){
-                                //先 在这里进行 定金 的核销  cgddcode  一次把对应合同的 蓝字定金+红字定金 的 余额 ，一次 冲销(红字，减少了应收)。
-                                String djje = ""+ -1*(Float.valueOf( orderMapper.getQTYFcanuseByCode(cgddcode)));
-                                if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
-                                    String qtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
-                                    orderMapper.addQTYFByPUStr(qtsycode,cgddcode,djje);
-                                    int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
-                                    orderMapper.addQTYFdetailByStr(id+"",djje,"转回定金："+cgddcode);
-                                    //插入 应收应付余额明细表
-                                    orderMapper.addYSWLByQTYFCode(qtsycode);
-                                    //更新对应 采购订单对应的已冲销金额
-                                    orderMapper.updatePuorderCX(cgddcode);
-                                }
-                                result.put("code","8888");
-                                result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
+                            //先 在这里进行 定金 的核销  cgddcode  一次把对应合同的 蓝字定金+红字定金 的 余额 ，一次 冲销(红字，减少了应收)。
+                            String djje = ""+ -1*(Float.valueOf( orderMapper.getQTYFcanuseByCode(cgddcode)));
+                            if(djje != null && !"".equals(djje) && Float.valueOf(djje) != 0){
+                                String qtsycode = "QTYF-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+                                orderMapper.addQTYFByPUStr(qtsycode,cgddcode,djje);
+                                int id = Integer.valueOf(orderMapper.getMaxidByQTYF());
+                                orderMapper.addQTYFdetailByStr(id+"",djje,"转回定金："+cgddcode);
+                                //插入 应收应付余额明细表
+                                orderMapper.addYSWLByQTYFCode(qtsycode);
+                                //更新对应 采购订单对应的已冲销金额
+                                orderMapper.updatePuorderCX(cgddcode);
                             }
-                            if(!DateUtil.isEffectiveDate(new SimpleDateFormat("yyyyMMdd").parse(codeday),
-                                    new SimpleDateFormat("yyyyMMdd").parse(starteDate),
-                                    new SimpleDateFormat("yyyyMMdd").parse(enddate))){
-                                result.put("code","8888");
-                                result.put("msg","超出订单执行时间范围!在备注中填入超时两个字，进入审批流！");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
-                            }else{
-                                result.put("code","9999");
-                                result.put("msg","不允许保存！");
-                                JSONObject job = new JSONObject(result);
-                                return job.toJSONString();
-                            }
+                            result.put("code","8888");
+                            result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
+                            JSONObject job = new JSONObject(result);
+                            return job.toJSONString();
                         }
                     }else{
                         result.put("code","9999");

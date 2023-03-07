@@ -20,21 +20,23 @@
     </select>
 
     <select id="getXsddmapByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select ISNULL(sum(t4.quantity),0) as totalNumbers,ISNULL(sum(t2.quantity),0) as ddNumbers,
-               max(t1.pubuserdefnvc3) as startdate,max(t1.pubuserdefnvc4) as enddate
+        select
+            max(t1.pubuserdefnvc3) as startdate,
+            max(t1.pubuserdefnvc4) as enddate,
+            ISNULL(sum(t2.executedQuantity ),0) as totalNumbers ,
+            ISNULL(sum(t2.quantity),0) as ddNumbers
         from SA_SaleOrder_b t2,SA_SaleOrder t1
-        left join SA_SaleDelivery_b t4 on t1.code = t4.sourceVoucherCode and t4.idSaleDeliveryDTO != (select id from SA_SaleDelivery where code = #{code})
-        left join SA_SaleDelivery t3 on t3.id = t4.idSaleDeliveryDTO
         where t1.id = t2.idSaleOrderDTO and t1.code = #{xsddcode}
         group by t1.code
     </select>
 
     <select id="getCgddmapByCode" parameterType="java.lang.String" resultType="java.util.Map">
-        select ISNULL(sum(t4.quantity),0) as totalNumbers,ISNULL(sum(t2.quantity),0) as ddNumbers,
-               max(t1.pubuserdefnvc3) as startdate,max(t1.pubuserdefnvc4) as enddate
+        select
+            max(t1.pubuserdefnvc3) as startdate,
+            max(t1.pubuserdefnvc4) as enddate,
+            ISNULL(sum(t2.countArrivalQuantity),0) as totalNumbers ,
+            ISNULL(sum(t2.quantity),0) as ddNumbers
         from PU_PurchaseOrder_b t2,PU_PurchaseOrder t1
-            left join PU_PurchaseArrival_b t4 on t1.code = t4.sourceVoucherCode and t4.idPurchaseArrivalDTO != (select id from PU_PurchaseArrival where code = #{code})
-            left join PU_PurchaseArrival t3 on t3.id = t4.idPurchaseArrivalDTO
         where t1.id = t2.idPurchaseOrderDTO and t1.code = #{cgddcode}
         group by t1.code
     </select>
@@ -555,7 +557,7 @@
                     max(t1.code) as code,
                     max(t1.SourceVoucherCode) as SourceVoucherCode ,
                     max(t1.idsourcevouchertype) as idsourcevouchertype ,
-                    ISNULL(max(t1.priuserdefnvc3),'') as yn ,
+                    ISNULL(max(t1.priuserdefnvc5),'') as yn ,
                     ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
                     ISNULL(max(t1.changer),'') AS bgr,
                     ISNULL(sum(t0.quantity),0) as sact
@@ -682,18 +684,28 @@
     </update>
 
     <update id="updateSaorderBySTInventoryQuanity" parameterType="java.lang.String">
-        update t1
-            set t1.executedQuantity = t4.quantity,t1.executedQuantity2 = t4.quantity,t1.deliveryQuantity = t4.quantity,t1.deliveryQuantity2 = t4.quantity
-        from SA_SaleOrder_b t1,SA_SaleOrder t2,SA_SaleDelivery t3,ST_RDRecord_b t4,ST_RDRecord t5
-        where t5.code = #{code} and t5.id = t4.idRDRecordDTO and t5.sourceVoucherCode = t3.code and t3.sourceVoucherCode = t2.code
-        and t2.id = t1.idSaleOrderDTO and t1.idinventory = t4.idinventory
+        update k1
+        set k1.executedQuantity = k2.ct,k1.executedQuantity2 = k2.ct
+            from SA_SaleOrder_b k1,(
+            select t1.id,sum(t3.quantity) as ct
+            from SA_SaleOrder_b t1,SA_SaleOrder t2,SA_SaleDelivery_b t3
+            where t1.idSaleOrderDTO = t2.id  and t2.code = t3.sourceVoucherCode
+            and t1.id = t3.sourceVoucherDetailId
+            group by t1.id
+            )k2
+        where k1.id = k2.id
     </update>
 
-    <update id="updatePuorderBySTInventoryQuanity">
-        update t1
-        set t1.countQuantity  = t4.quantity,t1.countQuantity2 = t4.quantity,t1.countArrivalQuantity = t4.quantity,t1.countArrivalQuantity2 = t4.quantity
-            from PU_PurchaseOrder_b t1,PU_PurchaseOrder t2,PU_PurchaseArrival t3,ST_RDRecord_b t4,ST_RDRecord t5
-        where t5.code = #{code} and t5.id = t4.idRDRecordDTO and t5.sourceVoucherCode = t3.code and t3.sourceVoucherCode = t2.code
-          and t2.id = t1.idPurchaseOrderDTO  and t1.idinventory = t4.idinventory
+    <update id="updatePuorderBySTInventoryQuanity" parameterType="java.lang.String">
+        update k1
+        set k1.countQuantity = k2.ct,k1.countQuantity2 = k2.ct
+            from PU_PurchaseOrder_b k1,(
+            select t1.id,sum(t3.quantity) as ct
+            from PU_PurchaseOrder_b t1,PU_PurchaseOrder t2,PU_PurchaseArrival_b t3
+            where t1.idPurchaseOrderDTO = t2.id  and t2.code = t3.sourceVoucherCode
+            and t1.id = t3.sourceVoucherDetailId
+            group by t1.id
+            )k2
+        where k1.id = k2.id
     </update>
 </mapper>

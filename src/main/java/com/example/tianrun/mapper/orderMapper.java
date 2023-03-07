@@ -24,9 +24,9 @@ public interface orderMapper {
     //根据 OrgId 获取 当前的 AppKey 和 AppSecret
     Map<String,String> getAppKeySecretByAppKey(@Param("OrgId") String OrgId);
 
-    Map<String,Object>  getXsddmapByCode(@Param("xsddcode") String xsddcode,@Param("code") String code);
+    Map<String,Object>  getXsddmapByCode(String xsddcode);
 
-    Map<String,Object>  getCgddmapByCode(@Param("cgddcode") String cgddcode,@Param("code") String code);
+    Map<String,Object>  getCgddmapByCode(String cgddcode);
 
     String getTpartencodeByByJX(String partnerjx);//根据 供应商简写 返回 供应商编码（T+有简写）
 
