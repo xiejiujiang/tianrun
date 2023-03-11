@@ -163,6 +163,13 @@ public class BasicServiceImpl implements BasicService {
                             && ("2".equals(createorderflag) || "0".equals(createorderflag)) ){
                         return pufailstr + "," +  "第"+(i+2)+"行失败，原因是：导入的含税单价和采购订单上的含税单价不一致！，请先检查单据！";
                     }
+
+
+                    if(pusourceVoucherDetailMap != null && pusourceVoucherDetailMap.get("deliveryplace") != null
+                            && ( !pusourceVoucherDetailMap.get("deliveryplace").toString().equals(retailTianrun.getDeliveryplace()) )
+                            && ("2".equals(createorderflag) || "0".equals(createorderflag)) ){
+                        return pufailstr + "," +  "第"+(i+2)+"行失败，原因是：导入的油厂和系统已有订单上合同号对于的油厂不一致！，请先检查单据！";
+                    }
                     //retailTianrun.setPlansalenumbers(plansalenumberslist.get(i).toString());
                     //注意 检查  合并和非合并的情况下， 数量是不是对的
                 }

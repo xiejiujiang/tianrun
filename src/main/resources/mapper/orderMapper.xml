@@ -26,7 +26,7 @@
             ISNULL(sum(t2.executedQuantity ),0) as totalNumbers ,
             ISNULL(sum(t2.quantity),0) as ddNumbers
         from SA_SaleOrder_b t2,SA_SaleOrder t1
-        where t1.id = t2.idSaleOrderDTO and t1.code = #{xsddcode}
+        where t1.id = t2.idSaleOrderDTO and t1.code = #{xsddcode} and t2.IsClose != 1
         group by t1.code
     </select>
 
@@ -34,10 +34,10 @@
         select
             max(t1.pubuserdefnvc3) as startdate,
             max(t1.pubuserdefnvc4) as enddate,
-            ISNULL(sum(t2.countArrivalQuantity),0) as totalNumbers ,
+            ISNULL(sum(t2.countQuantity),0) as totalNumbers ,
             ISNULL(sum(t2.quantity),0) as ddNumbers
         from PU_PurchaseOrder_b t2,PU_PurchaseOrder t1
-        where t1.id = t2.idPurchaseOrderDTO and t1.code = #{cgddcode}
+        where t1.id = t2.idPurchaseOrderDTO and t1.code = #{cgddcode} and t2.IsClose != 1
         group by t1.code
     </select>
 
@@ -93,14 +93,14 @@
 
     <select id="getPUSourceVoucherDetailId" parameterType="java.lang.String" resultType="java.util.Map">
         select top 1
-        ISNULL(CAST(t2.id AS nvarchar),'') AS id,ISNULL(CAST(t2.pubuserdefdecm4 AS nvarchar) ,'') AS danbaicha,t2.taxPrice,
+        ISNULL(CAST(t2.id AS nvarchar),'') AS id,ISNULL(CAST(t2.pubuserdefdecm4 AS nvarchar) ,'') AS danbaicha,t2.taxPrice,t4.name as deliveryplace,
         (select top 1 ISNULL(code,#{contractcode}) as sourceVoucherCode
                 from PU_PurchaseOrder where id in (
                 select idPurchaseOrderDTO from PU_PurchaseOrder_b where pubuserdefnvc3 = #{contractcode}
         )) as sourceVoucherCode
-        from PU_PurchaseOrder t1,PU_PurchaseOrder_b t2,AA_inventoryEntity t3
+        from PU_PurchaseOrder t1,PU_PurchaseOrder_b t2,AA_inventoryEntity t3,AA_project t4
         where t2.pubuserdefnvc3 = #{contractcode} and t1.id = t2.idPurchaseOrderDTO and t2.idinventory = t3.id
-        and t3.code = #{tinventorycode}
+        and t3.code = #{tinventorycode} and t2.idproject = t4.id
     </select>
 
     <update id="updatePUdetailBySTCode" parameterType="java.lang.String">
