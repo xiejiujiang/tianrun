@@ -256,7 +256,7 @@ public class BasicServiceImpl implements BasicService {
     // 1. 判断 导入油厂和选单油厂是否一致（前端已完成）
     // 2. 查询当前数量 和 订单已经执行的数量 是否超过 订单总数  已经  当前单据时间 是否在 订单的有效时间内
     @Override
-    public String getResultBySaParams(String code) {
+    public void getResultBySaParams(String code) {
         Map<String,Object> result = new HashMap<String,Object>();
         try {
             //销货单可能会选着多个销售订单 来 生单
@@ -264,21 +264,15 @@ public class BasicServiceImpl implements BasicService {
             if(saresultList != null && saresultList.size() !=0){
                 for(Map<String,Object> saresult : saresultList){
                     String xsddcode = saresult.get("xsddcode").toString();//当前的单据 对应的  销售订单单据编号
-                    //String codeday = saresult.get("codeday").toString();//当前的 单据日期
-                    //String numbers = saresult.get("numbers").toString();//当前单 据的总数量
-
                     //查询这个销售订单 后续 所有销货单（保存/审核中/审核）的数量总数，以及 这个 订单对应的 表头上的 开始日期-结束日期  。但是不包含当前销货单哈！
                     Map<String,Object> xsddmap = orderMapper.getXsddmapByCode(xsddcode);
                     if( xsddmap != null  &&  xsddmap.get("startdate") != null ){
                         String totalNumbers = xsddmap.get("totalNumbers").toString();// 这个销售订单后续所有销货单的总数量（包含当前单据的）
                         String ddNumbers = xsddmap.get("ddNumbers").toString();// 销售订单 本身的总数量
-                        //String starteDate = xsddmap.get("startdate").toString();// 销售订单 表头 的开始时间
-                        //String enddate = xsddmap.get("enddate").toString();//  销售订单 表头 的结束时间
                         if(  Float.valueOf(totalNumbers) <= (Float.valueOf(ddNumbers) -5)  ){
                             result.put("code","0000");
                             result.put("msg","允许保存");
                             JSONObject job = new JSONObject(result);
-                            return job.toJSONString();
                         }else{
                             //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
                             String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(xsddcode)));
@@ -295,13 +289,11 @@ public class BasicServiceImpl implements BasicService {
                             result.put("code","8888");
                             result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
                             JSONObject job = new JSONObject(result);
-                            return job.toJSONString();
                         }
                     }else{
                         result.put("code","9999");
                         result.put("msg","销售订单异常，查不到对应数据！");
                         JSONObject job = new JSONObject(result);
-                        return job.toJSONString();
                     }
                 }
             }
@@ -310,15 +302,13 @@ public class BasicServiceImpl implements BasicService {
             result.put("code","9999");
             result.put("msg","程序异常！");
             JSONObject job = new JSONObject(result);
-            return job.toJSONString();
         }
-        return "";
     }
 
 
     //进货单  处理 定金的逻辑
     @Override
-    public String getResultByPUParams(String code) {
+    public void getResultByPUParams(String code) {
         Map<String,Object> result = new HashMap<String,Object>();
         try {
             //进货单 可能 选着 多个 采购订单生成
@@ -326,19 +316,14 @@ public class BasicServiceImpl implements BasicService {
             if(puresultList != null && puresultList.size() != 0){
                 for(Map<String,Object> puresult : puresultList){
                     String cgddcode = puresult.get("cgddcode").toString();//当前的单据 对应的  采购订单单据编号
-                    //String codeday = puresult.get("codeday").toString();//当前的 单据日期
-                    //String numbers = puresult.get("numbers").toString();//当前单 据的总数量
                     Map<String,Object> cgddmap = orderMapper.getCgddmapByCode(cgddcode);
                     if( cgddmap != null  &&  cgddmap.get("startdate") != null ){
                         String totalNumbers = cgddmap.get("totalNumbers").toString();//这个销售订单后续所有销货单的总数量(包含当前单据的)
                         String ddNumbers = cgddmap.get("ddNumbers").toString();//采购订单总数量
-                        //String starteDate = cgddmap.get("startdate").toString();// 销售订单 表头 的开始时间
-                        //String enddate = cgddmap.get("enddate").toString();//  销售订单 表头 的结束时间
                         if( Float.valueOf(totalNumbers) <= (Float.valueOf(ddNumbers) -5) ){
                             result.put("code","0000");
                             result.put("msg","允许保存");
                             JSONObject job = new JSONObject(result);
-                            return job.toJSONString();
                         }else{
                             //先 在这里进行 定金 的核销  cgddcode  一次把对应合同的 蓝字定金+红字定金 的 余额 ，一次 冲销(红字，减少了应收)。
                             String djje = ""+ -1*(Float.valueOf( orderMapper.getQTYFcanuseByCode(cgddcode)));
@@ -355,13 +340,11 @@ public class BasicServiceImpl implements BasicService {
                             result.put("code","8888");
                             result.put("msg","超出订单执行数量(销货单 数量+对应订单已执行数量 后》= 订单总数量-5)! 已自动核销定金（后期再修改为 手动 选择是否！）");
                             JSONObject job = new JSONObject(result);
-                            return job.toJSONString();
                         }
                     }else{
                         result.put("code","9999");
                         result.put("msg","销售订单异常，查不到对应数据！");
                         JSONObject job = new JSONObject(result);
-                        return job.toJSONString();
                     }
                 }
             }
@@ -370,9 +353,7 @@ public class BasicServiceImpl implements BasicService {
             result.put("code","9999");
             result.put("msg","程序异常！");
             JSONObject job = new JSONObject(result);
-            return job.toJSONString();
         }
-        return "";
     }
 
     @Override

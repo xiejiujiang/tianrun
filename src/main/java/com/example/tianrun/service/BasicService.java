@@ -8,9 +8,9 @@ public interface BasicService {
 
     //String getResultBySaParams(String code,String xsddcode,String codeday,String numbers,String totalamount,String customername,String skcode);
 
-    String getResultBySaParams(String code);
+    void getResultBySaParams(String code);
 
-    String getResultByPUParams(String code);
+    void getResultByPUParams(String code);
 
     String auqtysByCode(String code,String djje,String yn,String type);
 
