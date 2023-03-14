@@ -84,8 +84,10 @@ public class TokenController {
                 LOGGER.info("-------------------销售出库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
                 // 审核之后 把 实际 数量 反写回 销货单的 数量上， 并自动计算 差异 ，写入 数量差异字段（都是是自定义字段）
                 orderMapper.updateSAdetailBySTCode(vourcherCode);//还要更新下 差异字段哦
+
                 //更新下对应的销货单上游 SA_SaleDeliverySourceRelation 里面的数量
                 orderMapper.updateSaleDeliverySourceRelation(vourcherCode);
+
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailBySABusinessCode(vourcherCode);
 
@@ -95,8 +97,7 @@ public class TokenController {
             }
 
             // 销售订单（合同）变更——》更新 后，保存, 处理定金（其他应收单）
-            if("SaleOrder_Change".equals(job.getString("msgType"))
-                || "SaleOrder_Update".equals(job.getString("msgType"))){
+            if("SaleOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 // 1 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
@@ -115,8 +116,7 @@ public class TokenController {
 
 
             // 采购订单（合同）变更——》更新 后，保存, 处理 定金（其他应付的问题）
-            if("PurchaseOrder_Change".equals(job.getString("msgType"))
-                    || "PurchaseOrder_Update".equals(job.getString("msgType"))){
+            if("PurchaseOrder_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
                 //采购订单的定金 也是 在这里 处理了！！！

@@ -317,7 +317,7 @@
 
     <select id="getQGQTYFByCode" parameterType="java.lang.String" resultType="java.lang.Integer">
         select ISNULL(count(id),0) as ct from CS_OtherPaymentVoucher
-        where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code} > 0
+        where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code} and  OrigAmountSum  > 0
     </select>
 
     <select id="getRecordQTYFByDDCode" parameterType="java.lang.String" resultType="java.lang.Integer">
@@ -524,7 +524,9 @@
             ISNULL(max(k1.bgr),'') as bgr,
             ISNULL(max(k1.sact),0) as sact,
             ISNULL(max(k2.pubuserdefdecm1),0) as bjdjje,
-            sum(k3.quantity) as bjct
+            sum(k3.quantity) as bjct,
+            ISNULL(max(k1.zzct),0) as zzct,
+            ISNULL(max(k1.mxct),0) as mxct
         from(
                 select
                     max(t1.code) as code,
@@ -533,7 +535,9 @@
                     ISNULL(max(t1.priuserdefnvc3),'') as yn ,
                     ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
                     ISNULL(max(t1.changer),'') AS bgr,
-                    ISNULL(sum(t0.quantity),0) as sact
+                    ISNULL(sum(t0.quantity),0) as sact,
+                    ISNULL(sum(t0.IsClose),0) as zzct,
+                    ISNULL(count(t0.id),0) as mxct
                 from SA_SaleOrder_b t0, SA_SaleOrder t1
                 where t0.idSaleOrderDTO = t1.id and t0.IsClose != 1 and t1.code = #{code}
                 group by t1.id
@@ -551,7 +555,9 @@
             ISNULL(max(k1.bgr),'') as bgr,
             ISNULL(max(k1.sact),0) as sact,
             ISNULL(max(k2.pubuserdefdecm1),0) as bjdjje,
-            sum(k3.quantity) as bjct
+            sum(k3.quantity) as bjct,
+            ISNULL(max(k1.zzct),0) as zzct,
+            ISNULL(max(k1.mxct),0) as mxct
         from(
                 select
                     max(t1.code) as code,
@@ -560,7 +566,9 @@
                     ISNULL(max(t1.priuserdefnvc5),'') as yn ,
                     ISNULL(max(t1.pubuserdefdecm1),0) as pubuserdefdecm1,
                     ISNULL(max(t1.changer),'') AS bgr,
-                    ISNULL(sum(t0.quantity),0) as sact
+                    ISNULL(sum(t0.quantity),0) as sact,
+                    ISNULL(sum(t0.IsClose),0) as zzct,
+                    ISNULL(count(t0.id),0) as mxct
                 from PU_PurchaseOrder_b t0, PU_PurchaseOrder t1
                 where t0.idPurchaseOrderDTO = t1.id and t0.IsClose != 1 and t1.code = #{code}
                 group by t1.id
