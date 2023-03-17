@@ -410,9 +410,9 @@ public class BasicServiceImpl implements BasicService {
         synchronized (this){
             //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单总数量/报价单总数量）
             //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
-            Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
-            String zzct = params.get("zzct").toString();//中止行的数量
-            String mxct = params.get("mxct").toString();//明细行的数量
+            Map<String,Object> mxmap = orderMapper.getSaorderMx(code);
+            String zzct = mxmap.get("zzct").toString();//中止行的数量
+            String mxct = mxmap.get("mxct").toString();//明细行的数量
             if(mxct.equals(zzct)){// 说明此单是 全部行中止的！
                 //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
                 String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(code)));
@@ -427,6 +427,7 @@ public class BasicServiceImpl implements BasicService {
                     orderMapper.updateSaorderCX(code);
                 }
             }else{
+                Map<String,Object> params = orderMapper.getSaorderDetailByCode(code);
                 //就是 普通 订单的正常 变更保存，需要 红冲，再蓝字什么的
                 if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
                         && "103".equals(params.get("idsourcevouchertype").toString())){
@@ -434,7 +435,7 @@ public class BasicServiceImpl implements BasicService {
                     String bjcode = params.get("SourceVoucherCode").toString();//报价单单号
                     int ct = orderMapper.getRecordQTYSByCode(bjcode,code);//系统中 是否已经有对应的其他应收单
                     String bjct = params.get("bjct").toString();//报价单总数量
-                    String bjdjje = params.get("bjdjje").toString();//报价单总数量
+                    String bjdjje = params.get("bjdjje").toString();//报价单总金额
                     String sact = params.get("sact").toString();//销售订单总数量
                     String sadjje = params.get("pubuserdefdecm1").toString();//销售订单上的 定金金额（表头上的）合同定金
                     //是否是 某人，且 是否 要 生成定金！ 麻烦把采购环节（请购和采购订单）中生成订金的操作放给王丹。销售的放给叶新蓉
@@ -512,9 +513,9 @@ public class BasicServiceImpl implements BasicService {
     @Override
     public void dealQTYFByPuOrderCode(String code) {
         synchronized (this){
-            Map<String,Object> params = orderMapper.getPuorderDetailByCode(code);//此处查询 采购的 单据情况
-            String zzct = params.get("zzct").toString();//中止行的数量
-            String mxct = params.get("mxct").toString();//明细行的数量
+            Map<String,Object> mxmap = orderMapper.getPuorderMx(code);
+            String zzct = mxmap.get("zzct").toString();//中止行的数量
+            String mxct = mxmap.get("mxct").toString();//明细行的数量
             if(mxct.equals(zzct)) {// 说明此单是 全部行中止的！
                 //先 在这里进行 定金 的核销  cgddcode  一次把对应合同的 蓝字定金+红字定金 的 余额 ，一次 冲销(红字，减少了应收)。
                 String djje = ""+ -1*(Float.valueOf( orderMapper.getQTYFcanuseByCode(code)));
@@ -529,6 +530,7 @@ public class BasicServiceImpl implements BasicService {
                     orderMapper.updatePuorderCX(code);
                 }
             }else{
+                Map<String,Object> params = orderMapper.getPuorderDetailByCode(code);//此处查询 采购的 单据情况
                 if(params != null && params.get("idsourcevouchertype") != null && !"".equals(params.get("idsourcevouchertype").toString())
                         && "101".equals(params.get("idsourcevouchertype").toString())){
                     //说明 来源单价是 请购单

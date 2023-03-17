@@ -173,4 +173,8 @@ public interface orderMapper {
     void updateSaorderBySTInventoryQuanity(String code);
 
     void updatePuorderBySTInventoryQuanity(String code);
+
+    Map<String,Object> getSaorderMx(String code);
+
+    Map<String,Object> getPuorderMx(String code);
 }
