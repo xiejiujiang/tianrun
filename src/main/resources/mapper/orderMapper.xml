@@ -107,9 +107,9 @@
         update  t1
         set t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
             t1.origTaxAmount = t4.quantity*t1.taxprice,
-            t1.origDiscountAmount = t4.quantity*t1.price,
-            t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.price),
-            t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.price)
+            t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice,
+            t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),
+            t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,ST_RDRecord t3,ST_RDRecord_b t4
         where t1.idPurchaseArrivalDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
           and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
@@ -134,9 +134,9 @@
         set t1.priuserdefdecm1 = (t1.quantity - t4.quantity),
             t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
             t1.origTaxAmount = t4.quantity*t1.taxprice,
-            t1.origDiscountAmount = t4.quantity*t1.price,
-            t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.price),
-            t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.price)
+            t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice,
+            t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),
+            t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,ST_RDRecord t3,ST_RDRecord_b t4
         where t1.idSaleDeliveryDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
           and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
