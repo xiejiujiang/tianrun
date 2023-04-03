@@ -62,17 +62,22 @@ public class TokenController {
             // {"id":"AC1C04B100013301500B4A9B012DB2EC","appKey":"A9A9WH1i","appId":"58","msgType":"SaleDelivery_Audit","time":"1649994072443","bizContent":{"externalCode":"","voucherID":"23","voucherDate":"2022/4/15 0:00:00","voucherCode":"SA-2022-04-0011"},"orgId":"90015999132","requestId":"86231b63-f0c2-4de1-86e9-70557ba9cd62"}
             JSONObject job = JSONObject.parseObject(destr);
             LOGGER.info("------------------- 正式消息接收地址，包含 ticket，消息订阅，具体是："+job.getString("msgType")+" -------------------");
-            // 采购入库单审核 订阅
-            if("PurchaseReceiveVoucher_Audit".equals(job.getString("msgType"))){
+            // 采购入库单 审核--->保存 订阅  (修改成 采购入库单的保存 或者 更新的时候 来 执行下面的内容)
+            //if("PurchaseReceiveVoucher_Audit".equals(job.getString("msgType"))){
+            if("PurchaseReceiveVoucher_Create".equals(job.getString("msgType")) || "PurchaseReceiveVoucher_Update".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
-                LOGGER.info("-------------------采购入库单：" + vourcherCode + "审核信息收到，马上进行处理-------------------");
+                LOGGER.info("-------------------采购入库单：" + vourcherCode + "保存或更新信息收到，马上进行处理-------------------");
+
                 //查询下 这个 入库单上的 商品 和 对应的 数量，金额。以及 对应的 进货单是哪个，然后再更新进货单上面的内容
                 orderMapper.updatePUdetailBySTCode(vourcherCode);
+
                 //更新下进货单对应的 PU_PurchaseArrival_SourceRelation
                 orderMapper.updatePurchaseArrivalSourceRelation(vourcherCode);
+
                 //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
                 orderMapper.updateARAPDetailByPUBusinessCode(vourcherCode);
+
                 //如果是从订单来的，那么对应订单的 deliveryQuantity   executedQuantity  以及 deliveryQuantity2   executedQuantity2 也需要更新成对应商品的出库单一致
                 orderMapper.updatePuorderBySTInventoryQuanity(vourcherCode);
             }
@@ -110,6 +115,7 @@ public class TokenController {
                 basicService.dealQTYSBySaOrderCode(vourcherCode);
             }
 
+
             // ------------------------------------------------------------------------------------------//
             // 取消了 采购订单  审核  或者  弃审 来 做的 2和3 （挨着的上面 2和 3 ）
             // ------------------------------------------------------------------------------------------//
@@ -146,8 +152,57 @@ public class TokenController {
                     || "SaleDelivery_Change".equals(job.getString("msgType"))){
                 SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
                 String vourcherCode = jrb.getBizContent().getVoucherCode();
+
                 // 根据这个 新的销售订单的明细 商品 和 价格，更新下 已经生成的销货单上的 商品 价格
                 orderMapper.updateSaDeliveryDetailBySaOrderCode(vourcherCode);
+
+                // 销货单明细表上的 priuserdefdecm2（实际数量）
+                orderMapper.updateSaDeliveryDetailBypriuserdefdecm2(vourcherCode);
+
+                //更新下对应的销货单上游 SA_SaleDeliverySourceRelation 里面的数量
+                orderMapper.updateSaleDeliverySourceRelationBypriuserdefdecm2(vourcherCode);
+
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailBySABusinessCodeBypriuserdefdecm2(vourcherCode);
+
+                //如果是从订单来的，那么对应订单的 deliveryQuantity   executedQuantity  以及 deliveryQuantity2   executedQuantity2
+                orderMapper.updateSaorderBySTInventoryQuanity(vourcherCode);
+
+                // ------------------------------------------------------------------------------//
+
+                //和 priuserdefdecm3（发票折扣）  有值的话就进行更新销货单上的金额相关字段
+                orderMapper.updateSaDeliveryDetailBypriuserdefdecm3(vourcherCode);
+
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailBySABusinessCodeBypriuserdefdecm3(vourcherCode);
+
+            }
+
+            // 进货单保存（修改）
+            if("PuArrival_Update".equals(job.getString("msgType"))
+                    || "PuArrival_Change".equals(job.getString("msgType"))){
+                SACsubJsonRootBean jrb =  job.toJavaObject(SACsubJsonRootBean.class);
+                String vourcherCode = jrb.getBizContent().getVoucherCode();
+
+                //查询下 这个 入库单上的 商品 和 对应的 数量，金额。以及 对应的 进货单是哪个，然后再更新进货单上面的内容
+                orderMapper.updatePUdetailBySTCodeBypriuserdefdecm2(vourcherCode);
+
+                //更新下进货单对应的 PU_PurchaseArrival_SourceRelation
+                orderMapper.updatePurchaseArrivalSourceRelationBypriuserdefdecm2(vourcherCode);
+
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailByPUBusinessCodeBypriuserdefdecm2(vourcherCode);
+
+                //如果是从订单来的，那么对应订单的 deliveryQuantity   executedQuantity  以及 deliveryQuantity2   executedQuantity2 也需要更新成对应商品的出库单一致
+                orderMapper.updatePuorderBySTInventoryQuanity(vourcherCode);
+
+
+                // ----------------------------------- 进货单上的折扣金额 ？ priuserdefdecm1 -------------------------------------------//
+                //和 priuserdefdecm1（发票折扣）  有值的话就进行更新销货单上的金额相关字段
+                orderMapper.updatePuDeliveryDetailBypriuserdefdecm1(vourcherCode);
+
+                //更新 应收应付明细账DTO（ARAP_Detail）中的对于金额
+                orderMapper.updateARAPDetailByPUBusinessCodeBypriuserdefdecm1(vourcherCode);
             }
         }catch (Exception e){
             e.printStackTrace();

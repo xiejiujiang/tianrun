@@ -14,10 +14,10 @@ public class ListToJson {
             Map<String,Object> dto = new HashMap<String,Object>();
             Map<String,Object> sa = new HashMap<String,Object>();
             Map<String,Object> Department = new HashMap<String,Object>();
-            Department.put("Code","01");//部门编码
+            Department.put("Code",retailTianrun.getDepartmentCode());//部门编码
             sa.put("Department",Department);
             Map<String,Object> Clerk = new HashMap<String,Object>();
-            Clerk.put("Code","0104");//业务员编码
+            Clerk.put("Code",retailTianrun.getPsersonCode());//业务员编码
             sa.put("Clerk",Clerk);
             sa.put("VoucherDate",retailTianrun.getPlannedpickingdate());//单据日期
             sa.put("ExternalCode",Md5.md5("XJJ"+Math.random()));//外部订单号，不可以重复（MD5，建议记录）

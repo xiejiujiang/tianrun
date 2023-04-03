@@ -177,4 +177,25 @@ public interface orderMapper {
     Map<String,Object> getSaorderMx(String code);
 
     Map<String,Object> getPuorderMx(String code);
+
+    void updateSaDeliveryDetailBypriuserdefdecm2(String code);
+
+    void updateSaleDeliverySourceRelationBypriuserdefdecm2(String code);
+
+    void updateARAPDetailBySABusinessCodeBypriuserdefdecm2(String code);
+
+    void updateARAPDetailBySABusinessCodeBypriuserdefdecm3(String code);
+
+    void updateSaDeliveryDetailBypriuserdefdecm3(String code);
+
+    void updatePUdetailBySTCodeBypriuserdefdecm2(String code);
+
+    void updatePurchaseArrivalSourceRelationBypriuserdefdecm2(String code);
+
+    void updateARAPDetailByPUBusinessCodeBypriuserdefdecm2(String code);
+
+    void updatePuDeliveryDetailBypriuserdefdecm1(String code);
+
+    void updateARAPDetailByPUBusinessCodeBypriuserdefdecm1(String code);
+
 }

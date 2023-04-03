@@ -100,6 +100,12 @@ public class RetailTianrun extends BaseRowModel {
     @ExcelProperty(index = 30) //结算客户编码
     private String settleCustomer;
 
+    @ExcelProperty(index = 31) //T+的部门编码
+    private String departmentCode;
+
+    @ExcelProperty(index = 32) //T+的员工编码
+    private String psersonCode;
+
     public String getPlannedpickingdate() {
         return plannedpickingdate;
     }
@@ -348,6 +354,22 @@ public class RetailTianrun extends BaseRowModel {
         this.settleCustomer = settleCustomer;
     }
 
+    public String getDepartmentCode() {
+        return departmentCode;
+    }
+
+    public void setDepartmentCode(String departmentCode) {
+        this.departmentCode = departmentCode;
+    }
+
+    public String getPsersonCode() {
+        return psersonCode;
+    }
+
+    public void setPsersonCode(String psersonCode) {
+        this.psersonCode = psersonCode;
+    }
+
     @Override
     public String toString() {
         return "RetailTianrun{" +
@@ -382,6 +404,8 @@ public class RetailTianrun extends BaseRowModel {
                 ", projectCode='" + projectCode + '\'' +
                 ", sourceVoucherCode='" + sourceVoucherCode + '\'' +
                 ", settleCustomer='" + settleCustomer + '\'' +
+                ", departmentCode='" + departmentCode + '\'' +
+                ", psersonCode='" + psersonCode + '\'' +
                 '}';
     }
 }

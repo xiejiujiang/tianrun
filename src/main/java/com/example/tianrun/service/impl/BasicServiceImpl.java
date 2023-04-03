@@ -127,6 +127,8 @@ public class BasicServiceImpl implements BasicService {
                     Map<String,Object> pusourceVoucherDetailMap = orderMapper.getPUSourceVoucherDetailId(retailTianrun.getContractcode(),tinventorycode.get("code").toString());
                     if(pusourceVoucherDetailMap != null){
                         //retailTianrun.setSourceVoucherCode("xxxxxxxx");//如果找不到，就用 contractcode 本身
+                        retailTianrun.setDepartmentCode(pusourceVoucherDetailMap.get("departmentCode").toString());//采购订单上的部门编码
+                        retailTianrun.setPsersonCode(pusourceVoucherDetailMap.get("personCode").toString());//采购订单上的业务员编码
                         retailTianrun.setPusourceVoucherDetailId(pusourceVoucherDetailMap.get("id").toString());
                         retailTianrun.setDanbaicha(pusourceVoucherDetailMap.get("danbaicha").toString());
                         /*if(pusourceVoucherDetailMap.get("taxPrice") != null && !"".equals(pusourceVoucherDetailMap.get("taxPrice").toString())){
@@ -418,11 +420,15 @@ public class BasicServiceImpl implements BasicService {
                 String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(code)));
                 if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
                     String qtsycode = "QTYS-"  + new SimpleDateFormat("yyyyMMdd").format(new Date()) + Md5.md5(""+Math.random()).substring(0,5);
+
                     orderMapper.addQTYSBySAStr(qtsycode,code,reddjje);
                     int id = Integer.valueOf(orderMapper.getMaxidByQTYS());
+
                     orderMapper.addQTYSdetailByStr(id+"",reddjje,"转回定金："+code);
+
                     //插入 应收应付余额明细表
                     orderMapper.addYSWLByQTYSCode(qtsycode);
+
                     // 更新 销货单 对应的 销售订单上的 已冲销金额
                     orderMapper.updateSaorderCX(code);
                 }
