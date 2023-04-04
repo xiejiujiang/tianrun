@@ -699,26 +699,24 @@
         update k1
         set k1.executedQuantity = k2.ct,k1.executedQuantity2 = k2.ct
             from SA_SaleOrder_b k1,(
-            select t1.id,sum(t3.quantity) as ct
+            select t3.saleOrderDetailId ,sum(t3.quantity) as ct
             from SA_SaleOrder_b t1,SA_SaleOrder t2,SA_SaleDelivery_b t3
-            where t1.idSaleOrderDTO = t2.id  and t2.code = t3.sourceVoucherCode
-            and t1.id = t3.sourceVoucherDetailId
-            group by t1.id
-            )k2
-        where k1.id = k2.id
+            where t1.idSaleOrderDTO = t2.id   and t3.saleOrderDetailId = t1.id
+            group by t3.saleOrderDetailId
+			)k2
+        where k1.id = k2.saleOrderDetailId
     </update>
 
     <update id="updatePuorderBySTInventoryQuanity" parameterType="java.lang.String">
         update k1
         set k1.countQuantity = k2.ct,k1.countQuantity2 = k2.ct
             from PU_PurchaseOrder_b k1,(
-            select t1.id,sum(t3.quantity) as ct
+            select t3.purchaseOrderDetailID,sum(t3.quantity) as ct
             from PU_PurchaseOrder_b t1,PU_PurchaseOrder t2,PU_PurchaseArrival_b t3
-            where t1.idPurchaseOrderDTO = t2.id  and t2.code = t3.sourceVoucherCode
-            and t1.id = t3.sourceVoucherDetailId
-            group by t1.id
+            where t1.idPurchaseOrderDTO = t2.id  and t1.id = t3.purchaseOrderDetailID
+            group by t3.purchaseOrderDetailID
             )k2
-        where k1.id = k2.id
+        where k1.id = k2.purchaseOrderDetailID
     </update>
 
     <select id="getSaorderMx" parameterType="java.lang.String" resultType="java.util.Map">
