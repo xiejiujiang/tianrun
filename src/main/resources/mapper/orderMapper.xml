@@ -758,7 +758,7 @@
             t1.tax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),
             t1.origTax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,SA_SaleDelivery_b t3
-        where t1.idSaleDeliveryDTO = t2.id and t2.code = #{code} and t1.id = t2.id
+        where t1.idSaleDeliveryDTO = t2.id and t2.code = #{code} and t1.id = t3.id
             and t3.priuserdefdecm2 is not null and t3.priuserdefdecm2  != 0
     </update>
 
