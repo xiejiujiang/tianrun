@@ -105,9 +105,11 @@
 
     <update id="updatePUdetailBySTCode" parameterType="java.lang.String">
         update  t1
-        set t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = ROUND(t4.quantity*t1.taxprice,2),
+        set t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,
+            t1.taxamount = ROUND(t4.quantity*t1.taxprice,2),
             t1.origTaxAmount = ROUND(t4.quantity*t1.taxprice,2),
             t1.origDiscountAmount = ROUND(t4.quantity*t1.origDiscountPrice,2),
+            t1.discountAmount = ROUND(t4.quantity*t1.origDiscountPrice,2),
             t1.tax = ROUND( (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice) , 2) ,
             t1.origTax = ROUND((t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),2)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,ST_RDRecord t3,ST_RDRecord_b t4
@@ -135,6 +137,7 @@
             t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
             t1.origTaxAmount = t4.quantity*t1.taxprice,
             t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice,
+            t1.discountAmount = t4.quantity*t1.origDiscountPrice,
             t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),
             t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,ST_RDRecord t3,ST_RDRecord_b t4
@@ -226,6 +229,7 @@
             t2.price = t4.price,
             t2.origTaxAmount = t4.origTaxAmount,
             t2.origDiscountAmount = t4.origDiscountAmount,
+            t2.discountAmount = t4.origDiscountAmount,
             t2.baseQuantity = t4.baseQuantity,
             t2.origDiscountPrice = t4.origDiscountPrice,
             t2.tax = t4.tax,
@@ -752,9 +756,11 @@
     <update id="updateSaDeliveryDetailBypriuserdefdecm2" parameterType="java.lang.String">
         update  t1
         set t1.priuserdefdecm1 = (t1.quantity - t3.priuserdefdecm2),
-            t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,t1.taxamount = t3.priuserdefdecm2*t1.taxprice,
+            t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,
+            t1.taxamount = t3.priuserdefdecm2*t1.taxprice,
             t1.origTaxAmount = t3.priuserdefdecm2*t1.taxprice,
             t1.origDiscountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
+            t1.discountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
             t1.tax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),
             t1.origTax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,SA_SaleDelivery_b t3
@@ -796,6 +802,7 @@
             t1.baseTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm3) / t1.quantity ,
             t1.taxPrice = (t1.origTaxAmount+t3.priuserdefdecm3) / t1.quantity ,
             t1.origDiscountAmount =  (t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate),
+            t1.discountAmount =  (t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate),
             t1.origDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
             t1.baseDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
             t1.price = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
@@ -811,6 +818,7 @@
         set t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,t1.taxamount = t3.priuserdefdecm2*t1.taxprice,
             t1.origTaxAmount = t3.priuserdefdecm2*t1.taxprice,
             t1.origDiscountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
+            t1.discountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
             t1.tax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),
             t1.origTax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,PU_PurchaseArrival_b t3
@@ -842,6 +850,7 @@
             t1.baseTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm1)/t1.quantity,
             t1.origTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm1)/t1.quantity,
             t1.origDiscountAmount =  (t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate),
+            t1.discountAmount =  (t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate),
             t1.origDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
             t1.baseDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
             t1.price = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
