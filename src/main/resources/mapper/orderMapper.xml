@@ -134,12 +134,13 @@
     <update id="updateSAdetailBySTCode" parameterType="java.lang.String">
         update  t1
         set t1.priuserdefdecm1 = (t1.quantity - t4.quantity),
-            t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,t1.taxamount = t4.quantity*t1.taxprice,
-            t1.origTaxAmount = t4.quantity*t1.taxprice,
-            t1.origDiscountAmount = t4.quantity*t1.origDiscountPrice,
-            t1.discountAmount = t4.quantity*t1.origDiscountPrice,
-            t1.tax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),
-            t1.origTax = (t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice)
+            t1.quantity = t4.quantity,t1.baseQuantity = t4.quantity,
+            t1.taxamount = ROUND(t4.quantity*t1.taxprice,2),
+            t1.origTaxAmount = ROUND(t4.quantity*t1.taxprice,2),
+            t1.origDiscountAmount = ROUND(t4.quantity*t1.origDiscountPrice,2),
+            t1.discountAmount = ROUND(t4.quantity*t1.origDiscountPrice,2),
+            t1.tax = ROUND((t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),2),
+            t1.origTax = ROUND((t4.quantity*t1.taxprice)-(t4.quantity*t1.origDiscountPrice),2)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,ST_RDRecord t3,ST_RDRecord_b t4
         where t1.idSaleDeliveryDTO = t2.id and t2.code = t3.sourceVoucherCode and t3.id = t4.idRDRecordDTO
           and t1.idinventory = t4.idinventory and t3.code = #{vourcherCode} and t1.id = t4.sourceVoucherDetailId
@@ -164,9 +165,9 @@
     <update id="updateSASAPreReceiveAmount" parameterType="java.lang.String">
         update  SA_SaleDelivery
         set PreReceiveAmount =
-            ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+            ( select ROUND(SUM(t3.taxAmount),2)  from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
             where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO ) ,
-            origprereceiveamount = ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+            origprereceiveamount = ( select ROUND(SUM(t3.taxAmount),2) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
                                      where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO )
         where id = ( select top 1 t1.id from SA_SaleDelivery t1,ST_RDRecord t2 where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} )
     </update>
@@ -174,7 +175,7 @@
     <update id="updateSAPreReceiveAmount" parameterType="java.lang.String">
         update SA_SaleDeliveryPreReceive
         set origcancelamount =
-                ( select SUM(t3.taxAmount) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
+                ( select ROUND(SUM(t3.taxAmount),2) from SA_SaleDelivery t1,ST_RDRecord t2,SA_SaleDelivery_b t3
                   where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} and t1.id = t3.idSaleDeliveryDTO )
         where idSaleDeliveryDTO =
               (select top 1  t1.id from SA_SaleDelivery t1,ST_RDRecord t2 where t1.code = t2.sourceVoucherCode and t2.code = #{vourcherCode} )
@@ -283,7 +284,7 @@
         AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
         auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
         HasRecordCredit,AuditedTime,priuserdefnvc2,PrintCount )
-        values(#{qtyscode},72,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyscode},72,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
             (select changer from SA_SaleQuotation where code = #{code}),
                GETDATE(),
             (select changer from SA_SaleQuotation where code = #{code}),
@@ -330,14 +331,14 @@
 
     <update id="updateQTYSdetailByStr" parameterType="java.lang.String">
         update CS_OtherReceiveVoucher_b
-        set origamount = #{djje},amount = #{djje}
+        set origamount = ROUND(${djje},2),amount = ROUND(${djje},2)
         where idotherReceiveVoucherDTO = (select top 1 id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origamount > 0
     </update>
 
     <update id="updateRedQTYSdetailByStr" parameterType="java.lang.String">
         update CS_OtherReceiveVoucher_b
-        set origamount = #{djje},amount = #{djje}
+        set origamount = ROUND(${djje},2),amount = ROUND(${djje},2)
         where idotherReceiveVoucherDTO = (
                                             select top 1 id
                                             from CS_OtherReceiveVoucher
@@ -362,14 +363,14 @@
 
     <update id="updateQTYFdetailByStr" parameterType="java.lang.String">
         update CS_OtherPaymentVoucher_b
-        set origamount = #{djje},amount = #{djje}
+        set origamount = ROUND(${djje},2),amount = ROUND(${djje},2)
         where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code} and priuserdefnvc2 = #{code})
         and origamount > 0
     </update>
 
     <update id="updateRedQTYFdetailByStr" parameterType="java.lang.String">
         update CS_OtherPaymentVoucher_b
-        set origamount = #{djje},amount = #{djje}
+        set origamount = ROUND(${djje},2),amount = ROUND(${djje},2)
         where idOtherPaymentVoucherDTO = (select top 1 id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{qgcode} and priuserdefnvc2 = #{code} )
           and origamount <![CDATA[ < ]]> 0
     </update>
@@ -394,7 +395,7 @@
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
                                            AuditedTime,priuserdefnvc2,PrintCount)
-        values(#{qtyfcode},69,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyfcode},69,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
                (select changer from Pu_PurchaseRequisition where code = #{code}),
                GETDATE(),
                (select changer from Pu_PurchaseRequisition where code = #{code}),
@@ -414,7 +415,7 @@
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
                                            HasRecordCredit,AuditedTime,priuserdefnvc2,PrintCount)
-        values(#{qtyscode},72,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyscode},72,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
                (select changer from SA_SaleOrder where code = #{code}),
                GETDATE(),
                (select changer from SA_SaleOrder where code = #{code}),
@@ -434,7 +435,7 @@
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
                                            HasRecordCredit,AuditedTime,priuserdefnvc2,PrintCount)
-        values(#{qtyscode},72,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyscode},72,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
                (select changer from SA_SaleOrder where code = #{code}),
                GETDATE(),
                (select changer from SA_SaleOrder where code = #{code}),
@@ -455,7 +456,7 @@
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
                                            AuditedTime,priuserdefnvc2,PrintCount)
-        values(#{qtyscode},69,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyscode},69,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
                (select changer from PU_PurchaseOrder where code = #{code}),
                GETDATE(),
                (select changer from PU_PurchaseOrder where code = #{code}),
@@ -476,7 +477,7 @@
                                            AmountSum,voucherState,voucherSettleState,voucherdate,maker,madedate,auditor,makerid,auditorid,
                                            auditeddate,idclerk,idpartner,iddepartment,idcurrency,createdtime,priuserdefnvc1,IdMarketingOrgan,
                                            AuditedTime,priuserdefnvc2,PrintCount)
-        values(#{qtyscode},69,1,#{djje},#{djje},189,428,GETDATE(),
+        values(#{qtyscode},69,1,ROUND(${djje},2),ROUND(${djje},2),189,428,GETDATE(),
                (select changer from PU_PurchaseOrder where code = #{code}),
                GETDATE(),
                (select changer from PU_PurchaseOrder where code = #{code}),
@@ -503,12 +504,12 @@
 
     <insert id="addQTYSdetailByStr" parameterType="java.lang.String">
         insert into CS_OtherReceiveVoucher_b(summary,origamount,amount,idotherReceiveVoucherDTO)
-        values(#{descc},#{djje},#{djje},${id})
+        values(#{descc},ROUND(${djje},2),ROUND(${djje},2),${id})
     </insert>
 
     <insert id="addQTYFdetailByStr" parameterType="java.lang.String">
         insert into CS_OtherPaymentVoucher_b(summary,origamount,amount,idOtherPaymentVoucherDTO)
-        values(#{descc},#{djje},#{djje},${id})
+        values(#{descc},ROUND(${djje},2),ROUND(${djje},2),${id})
     </insert>
 
     <delete id="deleteQTYSdetail" parameterType="java.lang.String">
@@ -658,7 +659,7 @@
     <update id="updatePurchaseRequisitionCX" parameterType="java.lang.String">
         update Pu_PurchaseRequisition
             set  priuserdefdecm3 = (
-                    SELECT ISNULL(sum(origamount),0)
+                    SELECT ROUND(ISNULL(sum(origamount),0),2)
                     from CS_OtherPaymentVoucher_b
                     where idOtherPaymentVoucherDTO in (select id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{code}) and origamount <![CDATA[ < ]]> 0
                 )
@@ -668,7 +669,7 @@
     <update id="updateSaleQuotationCX" parameterType="java.lang.String">
         update SA_SaleQuotation
             set  priuserdefdecm1 = (
-                    SELECT ISNULL(sum(origamount),0)
+                    SELECT ROUND(ISNULL(sum(origamount),0),2)
                     from CS_OtherReceiveVoucher_b
                     where idotherReceiveVoucherDTO in (select id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{code}) and origamount <![CDATA[ < ]]> 0
                 )
@@ -678,7 +679,7 @@
     <update id="updateSaorderCX" parameterType="java.lang.String">
         update SA_SaleOrder
             set priuserdefdecm3 = (
-                    SELECT ISNULL(sum(origamount),0)
+                    SELECT ROUND(ISNULL(sum(origamount),0),2)
                     from CS_OtherReceiveVoucher_b
                     where idotherReceiveVoucherDTO in (select id from CS_OtherReceiveVoucher where priuserdefnvc1 = #{xsddcode}) and origamount <![CDATA[ < ]]> 0
                 )
@@ -688,7 +689,7 @@
     <update id="updatePuorderCX" parameterType="java.lang.String">
         update PU_PurchaseOrder
         set priuserdefdecm3 = (
-            SELECT ISNULL(sum(origamount),0)
+            SELECT ROUND(ISNULL(sum(origamount),0),2)
             from CS_OtherPaymentVoucher_b
             where idOtherPaymentVoucherDTO in (select id from CS_OtherPaymentVoucher where priuserdefnvc1 = #{cgddcode}) and origamount <![CDATA[ < ]]> 0
         )
@@ -755,12 +756,12 @@
         update  t1
         set t1.priuserdefdecm1 = (t1.quantity - t3.priuserdefdecm2),
             t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,
-            t1.taxamount = t3.priuserdefdecm2*t1.taxprice,
-            t1.origTaxAmount = t3.priuserdefdecm2*t1.taxprice,
-            t1.origDiscountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
-            t1.discountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
-            t1.tax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),
-            t1.origTax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice)
+            t1.taxamount = ROUND(t3.priuserdefdecm2*t1.taxprice,2),
+            t1.origTaxAmount = ROUND(t3.priuserdefdecm2*t1.taxprice,2),
+            t1.origDiscountAmount = ROUND(t3.priuserdefdecm2*t1.origDiscountPrice,2),
+            t1.discountAmount = ROUND(t3.priuserdefdecm2*t1.origDiscountPrice,2),
+            t1.tax = ROUND((t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),2),
+            t1.origTax = ROUND((t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),2)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,SA_SaleDelivery_b t3
         where t1.idSaleDeliveryDTO = t2.id and t2.code = #{code} and t1.id = t3.id
             and t3.priuserdefdecm2 is not null and t3.priuserdefdecm2  != 0
@@ -794,18 +795,18 @@
 
     <update id="updateSaDeliveryDetailBypriuserdefdecm3" parameterType="java.lang.String">
         update  t1
-        set t1.origTaxAmount = t1.origTaxAmount+t3.priuserdefdecm3,
-            t1.taxamount = t1.origTaxAmount+t3.priuserdefdecm3,
+        set t1.origTaxAmount = ROUND(t1.origTaxAmount+t3.priuserdefdecm3,2),
+            t1.taxamount = ROUND(t1.origTaxAmount+t3.priuserdefdecm3,2),
             t1.origTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm3) / t1.quantity ,
             t1.baseTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm3) / t1.quantity ,
             t1.taxPrice = (t1.origTaxAmount+t3.priuserdefdecm3) / t1.quantity ,
-            t1.origDiscountAmount =  (t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate),
-            t1.discountAmount =  (t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate),
+            t1.origDiscountAmount = ROUND((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate),2) ,
+            t1.discountAmount = ROUND((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate) , 2 ) ,
             t1.origDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
             t1.baseDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
             t1.price = ((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)) / t1.quantity ,
-            t1.tax = (t1.origTaxAmount+t3.priuserdefdecm3)-((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)),
-            t1.origTax = (t1.origTaxAmount+t3.priuserdefdecm3)-((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate))
+            t1.tax = ROUND((t1.origTaxAmount+t3.priuserdefdecm3)-((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)),2),
+            t1.origTax = ROUND((t1.origTaxAmount+t3.priuserdefdecm3)-((t1.origTaxAmount+t3.priuserdefdecm3) / (1+t1.taxrate)),2)
             from SA_SaleDelivery_b t1,SA_SaleDelivery t2,SA_SaleDelivery_b t3
             where t1.idSaleDeliveryDTO = t2.id and t2.code = #{code} and t1.id = t3.id
           and t3.priuserdefdecm3 is not null and t3.priuserdefdecm3  != 0
@@ -813,12 +814,13 @@
 
     <update id="updatePUdetailBySTCodeBypriuserdefdecm2" parameterType="java.lang.String">
         update  t1
-        set t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,t1.taxamount = t3.priuserdefdecm2*t1.taxprice,
-            t1.origTaxAmount = t3.priuserdefdecm2*t1.taxprice,
-            t1.origDiscountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
-            t1.discountAmount = t3.priuserdefdecm2*t1.origDiscountPrice,
-            t1.tax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),
-            t1.origTax = (t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice)
+        set t1.quantity = t3.priuserdefdecm2,t1.baseQuantity = t3.priuserdefdecm2,
+            t1.taxamount = ROUND(t3.priuserdefdecm2*t1.taxprice,2),
+            t1.origTaxAmount = ROUND(t3.priuserdefdecm2*t1.taxprice,2),
+            t1.origDiscountAmount = ROUND(t3.priuserdefdecm2*t1.origDiscountPrice,2) ,
+            t1.discountAmount = ROUND(t3.priuserdefdecm2*t1.origDiscountPrice,2),
+            t1.tax = ROUND((t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),2),
+            t1.origTax = ROUND((t3.priuserdefdecm2*t1.taxprice)-(t3.priuserdefdecm2*t1.origDiscountPrice),2)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,PU_PurchaseArrival_b t3
         where t1.idPurchaseArrivalDTO = t2.id and t3.id = t1.id and t2.code = #{code}
             and t3.priuserdefdecm2 is not null and t3.priuserdefdecm2 != 0
@@ -842,18 +844,18 @@
 
     <update id="updatePuDeliveryDetailBypriuserdefdecm1" parameterType="java.lang.String">
         update  t1
-        set t1.origTaxAmount = t1.origTaxAmount+t3.priuserdefdecm1,
-            t1.taxamount = t1.origTaxAmount+t3.priuserdefdecm1,
+        set t1.origTaxAmount = ROUND(t1.origTaxAmount+t3.priuserdefdecm1,2),
+            t1.taxamount = ROUND(t1.origTaxAmount+t3.priuserdefdecm1,2),
             t1.taxPrice = (t1.origTaxAmount+t3.priuserdefdecm1)/t1.quantity,
             t1.baseTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm1)/t1.quantity,
             t1.origTaxPrice = (t1.origTaxAmount+t3.priuserdefdecm1)/t1.quantity,
-            t1.origDiscountAmount =  (t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate),
-            t1.discountAmount =  (t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate),
+            t1.origDiscountAmount = ROUND((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate) , 2) ,
+            t1.discountAmount = ROUND((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate) , 2) ,
             t1.origDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
             t1.baseDiscountPrice = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
-            t1.price = ((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))/t1.quantity,
-            t1.tax = (t1.origTaxAmount+t3.priuserdefdecm1)-((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate)),
-            t1.origTax = (t1.origTaxAmount+t3.priuserdefdecm1)-((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate))
+            t1.price = ( (t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate) )/t1.quantity,
+            t1.tax = ROUND((t1.origTaxAmount+t3.priuserdefdecm1)-((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate)),2),
+            t1.origTax = ROUND((t1.origTaxAmount+t3.priuserdefdecm1)-((t1.origTaxAmount+t3.priuserdefdecm1) / (1+t1.taxrate)),2)
             from PU_PurchaseArrival_b t1,PU_PurchaseArrival t2,PU_PurchaseArrival_b t3
         where t1.idPurchaseArrivalDTO = t2.id and t2.code = #{code} and t1.id = t3.id
           and t3.priuserdefdecm1 is not null and t3.priuserdefdecm1  != 0
