@@ -126,7 +126,7 @@ public class BasicServiceImpl implements BasicService {
                     //进货明细 的 来源单据单据对应的明细行ID  以及  订单上 这一行的 蛋白差！
                     Map<String,Object> pusourceVoucherDetailMap = orderMapper.getPUSourceVoucherDetailId(retailTianrun.getContractcode(),tinventorycode.get("code").toString());
                     if(pusourceVoucherDetailMap != null){
-                        //retailTianrun.setSourceVoucherCode("xxxxxxxx");//如果找不到，就用 contractcode 本身
+                        retailTianrun.setSourceVoucherCode(pusourceVoucherDetailMap.get("sourceVoucherCode").toString());//如果找不到，就用 contractcode 本身
                         retailTianrun.setDepartmentCode(pusourceVoucherDetailMap.get("departmentCode").toString());//采购订单上的部门编码
                         retailTianrun.setPsersonCode(pusourceVoucherDetailMap.get("personCode").toString());//采购订单上的业务员编码
                         retailTianrun.setPusourceVoucherDetailId(pusourceVoucherDetailMap.get("id").toString());
@@ -413,9 +413,15 @@ public class BasicServiceImpl implements BasicService {
             //如果有来源单号（报价单单号）：先用报价单单号 生成 其他应收（红字），金额是：报价单上的定金金额*（销售订单总数量/报价单总数量）
             //再生成 一个 其他应收单（蓝字），金额是：销售订单上的 定金金额（表头上的）合同定金 + 是否生成  来 自动生成 其他应收的蓝字（合同定金 ）
             Map<String,Object> mxmap = orderMapper.getSaorderMx(code);
+            Map<String,Object> saorderDetailZX = orderMapper.saorderDetailZX(code);//查询此订单所有非中止行的数量是否执行到了 -5 以内
             String zzct = mxmap.get("zzct").toString();//中止行的数量
             String mxct = mxmap.get("mxct").toString();//明细行的数量
-            if(mxct.equals(zzct)){// 说明此单是 全部行中止的！
+            // 说明此单是 全部行中止的！ 或者 订单变更后，销货单和订单达到释放订金的条件
+            if( mxct.equals(zzct) ||
+                    ( saorderDetailZX != null
+                            && ( Float.valueOf(saorderDetailZX.get("saorderct").toString())-5 <= Float.valueOf(saorderDetailZX.get("sadelict").toString())  )
+                    )
+            ){
                 //先 在这里进行 定金 的核销  xsddcode  一次把对应合同的 蓝字定金+红字定金的余额 ，一次 冲销(红字，减少了应收)。
                 String reddjje = ""+ -1*(Float.valueOf( orderMapper.getQTSYcanuseByCode(code)));
                 if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
@@ -426,7 +432,7 @@ public class BasicServiceImpl implements BasicService {
 
                     orderMapper.addQTYSdetailByStr(id+"",reddjje,"转回定金："+code);
 
-                    //插入 应收应付余额明细表
+                    //插入 应收应付余额明细表s
                     orderMapper.addYSWLByQTYSCode(qtsycode);
 
                     // 更新 销货单 对应的 销售订单上的 已冲销金额
@@ -471,19 +477,19 @@ public class BasicServiceImpl implements BasicService {
                             orderMapper.addYSWLByQTYSCode(qtsycode);
                         }
                     }
-                    // 已经存在，就只能 更新！！！
+                    // 已经存在，就只能 更新！！！   5-5 同黄蜜讨论后，决定，已经生成的定价不再更新！
                     if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
                             && params.get("bgr") != null && !"".equals(params.get("bgr").toString())
                             && "叶新蓉".equals(params.get("bgr").toString()) && ct != 0){
                         //先 更新 其他应收的定金(红字！)
-                        String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
+                        /*String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
                         if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
                             orderMapper.updateRedQTYSdetailByStr(bjcode,code,reddjje);
                             orderMapper.updateRedYSWLByQTYSCode(bjcode,code,reddjje);
                         }
                         //再 更新 蓝字的其他应收的定金
                         orderMapper.updateQTYSdetailByStr(code,sadjje);
-                        orderMapper.updateYSWLByQTYSCode(code,sadjje);
+                        orderMapper.updateYSWLByQTYSCode(code,sadjje);*/
                     }
                 }else{
                     int ct = orderMapper.getRecordQTYSByDDCode(code);
@@ -574,19 +580,19 @@ public class BasicServiceImpl implements BasicService {
                             orderMapper.addYSWLByQTYFCode(qtsycode);
                         }
                     }
-                    //只能更新！
+                    //只能更新！  5-5 之后，同黄蜜讨论后，不再更新！
                     if(params.get("yn")!=null && "是".equals(params.get("yn").toString())
                             && params.get("bgr") != null && !"".equals(params.get("bgr").toString())
                             && "王丹".equals(params.get("bgr").toString()) && ct != 0){
                         //先 更新 其他应付的定金(红字！)
-                        String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
+                        /*String reddjje =  ""+(-1f * ( Float.valueOf(bjdjje) * (Float.valueOf(sact)/Float.valueOf(bjct))));
                         if(reddjje != null && !"".equals(reddjje) && Float.valueOf(reddjje) != 0){
                             orderMapper.updateRedQTYFdetailByStr(qgcode,code,reddjje);
                             orderMapper.updateRedYSWLByQTYFCode(qgcode,code,reddjje);
                         }
                         //再 更新 蓝字的其他应付的定金
                         orderMapper.updateQTYFdetailByStr(code,sadjje);
-                        orderMapper.updateYSWLByQTYFCode(code,sadjje);
+                        orderMapper.updateYSWLByQTYFCode(code,sadjje);*/
                     }
                 }else{
                     int ct = orderMapper.getRecordQTYFByDDCode(code);

@@ -176,6 +176,8 @@ public interface orderMapper {
 
     Map<String,Object> getSaorderMx(String code);
 
+    Map<String,Object> saorderDetailZX(String code);
+
     Map<String,Object> getPuorderMx(String code);
 
     void updateSaDeliveryDetailBypriuserdefdecm2(String code);

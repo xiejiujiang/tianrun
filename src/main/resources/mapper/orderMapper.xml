@@ -93,11 +93,13 @@
 
     <select id="getPUSourceVoucherDetailId" parameterType="java.lang.String" resultType="java.util.Map">
         select top 1
-        ISNULL(CAST(t2.id AS nvarchar),'') AS id,ISNULL(CAST(t2.pubuserdefdecm4 AS nvarchar) ,'') AS danbaicha,t2.taxPrice,t4.name as deliveryplace,
-        (select top 1 ISNULL(code,#{contractcode}) as sourceVoucherCode
-                from PU_PurchaseOrder where id in (
-                select idPurchaseOrderDTO from PU_PurchaseOrder_b where pubuserdefnvc3 = #{contractcode}
-        )) as sourceVoucherCode,t5.code as departmentCode,t6.code as personCode
+                ISNULL(CAST(t2.id AS nvarchar),'') AS id,ISNULL(CAST(t2.pubuserdefdecm4 AS nvarchar) ,'') AS danbaicha,t2.taxPrice,t4.name as deliveryplace,
+                (select top 1
+                ISNULL(code,#{contractcode}) as sourceVoucherCode
+                from PU_PurchaseOrder
+                where id in ( select idPurchaseOrderDTO from PU_PurchaseOrder_b where pubuserdefnvc3 = #{contractcode})
+                ) as sourceVoucherCode,
+               t5.code as departmentCode,t6.code as personCode
         from PU_PurchaseOrder t1,PU_PurchaseOrder_b t2,AA_inventoryEntity t3,AA_project t4,AA_department t5,AA_person t6
         where t2.pubuserdefnvc3 = #{contractcode} and t1.id = t2.idPurchaseOrderDTO and t2.idinventory = t3.id
         and t3.code = #{tinventorycode} and t2.idproject = t4.id and t1.iddepartment = t5.id and t1.idclerk = t6.id
@@ -128,7 +130,8 @@
         update  t1
         set t1.quantity=t2.quantity, t1.baseQuantity=t2.quantity
             from PU_PurchaseArrival_SourceRelation  t1,ST_RDRecord_b t2,ST_RDRecord t3
-        where t1.idPurchaseArrivalDetailDTO = t2.sourceVoucherDetailId and t2.idRDRecordDTO = t3.id and t3.code = #{code}
+        where t1.idPurchaseArrivalDetailDTO = t2.sourceVoucherDetailId
+            and t2.idRDRecordDTO = t3.id and t3.code = #{code}
     </update>
 
     <update id="updateSAdetailBySTCode" parameterType="java.lang.String">
@@ -734,6 +737,15 @@
         from SA_SaleOrder_b t0, SA_SaleOrder t1
         where t0.idSaleOrderDTO = t1.id   and t1.code = #{code}
         group by t1.id
+    </select>
+
+    <select id="saorderDetailZX" parameterType="java.lang.String" resultType="java.util.Map">
+        select sum(t1.quantity) as saorderct,ISNULL(sum(t2.quantity),0) as sadelict
+        from SA_SaleOrder t0, SA_SaleOrder_b t1
+        left join SA_SaleDelivery_b t2 on t1.id = t2.saleOrderDetailId
+        left join SA_SaleDelivery t3 on t3.id = t2.idSaleDeliveryDTO and t3.voucherState = 189
+        where t1.idSaleOrderDTO = t0.id and t0.code = #{code} and t1.IsClose != 1
+        group by t1.idSaleOrderDTO
     </select>
 
     <select id="getPuorderMx" parameterType="java.lang.String" resultType="java.util.Map">

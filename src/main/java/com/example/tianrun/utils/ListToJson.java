@@ -41,9 +41,9 @@ public class ListToJson {
             sa.put("RdStyle",RdStyle);*/
 
             //进货单表头上的 采购订单号  PurchaseOrderCode
-            Map<String,Object> PurchaseOrder = new HashMap<String,Object>();
+            /*Map<String,Object> PurchaseOrder = new HashMap<String,Object>();
             PurchaseOrder.put("Code",retailTianrun.getContractcode().trim());//采购订单号(合同号)
-            sa.put("PurchaseOrder",PurchaseOrder);
+            sa.put("PurchaseOrder",PurchaseOrder);*/
 
             sa.put("Memo",retailTianrun.getGetdesc());//备注
 
@@ -81,8 +81,7 @@ public class ListToJson {
 
             //关联采购订单
             DetailM1.put("idsourcevouchertype","27");//明细1 的 来源单据类型ID
-            //DetailM1.put("sourceVoucherCode",retailTianrun.getContractcode());//明细1 的 来源单据单据编号 (合同号)
-            DetailM1.put("sourceVoucherCode",retailTianrun.getSourceVoucherCode());
+            DetailM1.put("sourceVoucherCode",retailTianrun.getSourceVoucherCode());//明细1 的 来源单据单据编号 (合同号)
             DetailM1.put("sourceVoucherDetailId",retailTianrun.getPusourceVoucherDetailId());//明细1 的 来源单据单据对应的明细行ID
 
             // 自定义字段
