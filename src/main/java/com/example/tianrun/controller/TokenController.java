@@ -41,7 +41,7 @@ public class TokenController {
     //这个里面 主要 用来 接受 code ,刷新 token ，更新对应的数据库
     @RequestMapping(value="/recode", method = {RequestMethod.GET,RequestMethod.POST})
     public @ResponseBody String recode(HttpServletRequest request, HttpServletResponse response) {
-        LOGGER.info("------------------- 正式OAuth回调地址 -------------------");
+        LOGGER.info("------------------- 正式OAuth回调地址 --------------------");
         String code = request.getParameter("code");
         //第一次授权后，会有这个code,立刻调用 一次 授权码换token接口 ，拿到完整的 token 相关信息，并写入数据库。
         //3月17日思考： 暂时不用接口来访问，直接在线访问后 拿到第一次的数据，并 复制 填入数据库表中接口（后续定时任务来更新）
